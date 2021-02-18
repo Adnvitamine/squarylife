@@ -1,0 +1,25 @@
+{
+  "name": "bubblehub",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^1.3.4",
+    "@material-ui/core": "^4.11.3",
+    "firebase": "^8.2.7",
+    "firebase-admin": "^9.5.0",
+    "next": "10.0.6",
+    "react": "17.0.1",
+    "react-dom": "17.0.1",
+    "react-firebase-hooks": "^2.2.0",
+    "react-hook-form": "^6.15.1",
+    "yup": "^0.32.9"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  }
+}
