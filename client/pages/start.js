@@ -8,12 +8,12 @@ import DialogTitle from '@material-ui/core/DialogTitle';
 import firebase from "firebase/app";
 import "firebase/auth";
 import "firebase/firestore";
-import initFirebase from "./services/firebase";
+import initFirebase from "./api/firebase";
 
 //import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
 import SquareList from "./squares/squareList";
-import SquarePanel from './squares/squarePanel';
+import MainChar from "./sprites/characters/mainCharacter/mainChar";
 
 initFirebase();
 
@@ -37,10 +37,12 @@ const Start = () => {
 
   // Reference to user squares in firestore
   const squaresRef = firestore.collection('squares');
-  const squaresQuery = squaresRef.orderBy('name');
+  const squaresQuery = squaresRef.orderBy('uid');
   const [squaresCollection] = useCollectionData(squaresQuery, {idField: 'id'});
-
-
+  
+  const [squareListQuery, setSquareListQuery] = useState();
+  const [squareListCollection] = useCollectionData(squareListQuery, {idField: 'id'});
+  
 
   const handleAuthentication = async (e) =>{
       
@@ -104,8 +106,7 @@ const Start = () => {
             
             console.log("create User");
             await squaresRef.doc(`${uid}`).set({
-              uid: user.uid,
-              quantity: 0
+              uid: user.uid
             });
           }
           
@@ -164,18 +165,43 @@ const Start = () => {
 
   const DeleteUser = async () =>{
     setOpen(false);
+
+    console.log(squareListCollection.length);
+    if(userStorage){
+      if(squareListCollection){
+        for(let i = 0; i < squareListCollection.length; i++){
+          const squareUid = userStorage.uid + (i+1);
+          console.log(squareUid);
+          
+          const deleteUserSquareCollection = await squaresRef.doc(userStorage.uid).collection('square').doc(squareUid).delete();
+        }
+      }
+    
+      const deleteUserSquare = await squaresRef.doc(userStorage.uid).delete();
+      const deleteUser = await usersRef.doc(userStorage.uid).delete();
+      const deleteOnlineUser = await onlineUsersRef.doc(userStorage.uid).delete();
+      setUserStorage();
+      localStorage.removeItem("user");
+    }else{
+      console.log("something when wrong")
+    }
+    /*
     const deleteUserSquare = await squaresRef.doc(userStorage.uid).delete();
     const deleteUser = await usersRef.doc(userStorage.uid).delete();
     const deleteOnlineUser = await onlineUsersRef.doc(userStorage.uid).delete();
     setUserStorage();
     localStorage.removeItem("user");
+    */
+    
   }
+
   // Logout handler
   const handleLogOut = async () =>{
     const deleteOnlineUser = await onlineUsersRef.doc(userStorage.uid).delete();
     const logOutGoogle = await firebase.auth().signOut();
     setUserStorage();
     localStorage.removeItem("user");
+    localStorage.removeItem("edit");
     // window.location = "";
   }
 
@@ -184,7 +210,19 @@ const Start = () => {
     const local = JSON.parse(localStorage.getItem("user"));
     console.log(local);
     setUserStorage(local);
-}, []);
+  }, []);
+
+
+  useEffect(() => {
+    if (userStorage) {
+      console.log(userStorage);
+      
+      const squareListRef = firestore.collection('squares').doc(userStorage.uid).collection('square');
+      const squareListQuery = squareListRef.orderBy('name');
+
+      setSquareListQuery(squareListQuery);
+      }
+  }, [userStorage]);
 
     return(
         <>
@@ -233,16 +271,18 @@ const Start = () => {
                           <h1 style={{margin: "1% 0%"}}>Log Square</h1>
                           <p>{userStorage  && (`Welcome ${userStorage.username}`)}</p>
                           <p>{userStorage  && (`Square_id: ${userStorage.uid}`)}</p>
+                          <div className="avatarPreview" style={{position: "relative", width: "10%", margin: "auto", marginTop: "0",marginBottom: "0", paddingBottom: "10%",border: "1px solid black"}}>
+                            <div style={{position: "absolute", height: "100%", width: "100%", margin: "0", display: "flex"}}><MainChar/></div>
+                          </div>
                           <div className="userAddFriendButton" style={{
                                                                         position: "relative", 
                                                                         textAlign: "center", 
                                                                         width: "100%", 
                                                                         display: "flex", 
                                                                         alignItems: "center", 
-                                                                        justifyContent: "space-evenly", 
-                                                                        backgroundColor: "rgba(252, 164, 0, 0.493)",
+                                                                        justifyContent: "space-evenly",
                                                                         margin: "1% 0% 0% 0%"}}>
-                            <Button variant="contained" style={{backgroundColor: "orange"}}>Add Friend</Button>
+                            <Button variant="contained" style={{backgroundColor: "orange"}}>Change Avatar</Button>
                           </div>
                           <div className="userDeleteButton" style={{
                                                                     position: "relative",
@@ -250,8 +290,7 @@ const Start = () => {
                                                                     width: "100%", 
                                                                     display: "flex", 
                                                                     alignItems: "center", 
-                                                                    justifyContent: "space-evenly", 
-                                                                    backgroundColor: "rgba(252, 164, 0, 0.493)",
+                                                                    justifyContent: "space-evenly",
                                                                     margin: "1% 0% 0% 0%"}}>
                             <Button variant="contained" color="secondary" onClick={()=>handleClickOpen()}>Delete User</Button>
                             <Dialog

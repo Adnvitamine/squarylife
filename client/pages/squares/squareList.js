@@ -8,8 +8,9 @@ import FormHelperText from '@material-ui/core/FormHelperText';
 import FormControl from '@material-ui/core/FormControl';
 import firebase from "firebase/app";
 import "firebase/firestore";
-import initFirebase from "../services/firebase";
+import initFirebase from "../api/firebase";
 import DefaultTheme from "../sprites/themes/squareTheme";
+import { useRouter } from 'next/router';
 
 import { useDocumentData } from 'react-firebase-hooks/firestore';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
@@ -22,6 +23,7 @@ const firestore = firebase.firestore();
 
 
 const SquareList = ({uid}) =>{
+  const router = useRouter();
   const userSquareRef = firestore.collection('squares').doc(uid);
   const userSquareQuery = userSquareRef;
   const [userSquareCollection] = useDocumentData(userSquareQuery, {idField: 'id'});
@@ -58,7 +60,9 @@ const SquareList = ({uid}) =>{
   const openSquarePanel = async () =>{
     setSquarePanel(true);
   }
-  const handleClosePanel = async () =>{
+  const handleClosePanel = () =>{
+    setThemeSquare("");
+    setNameSquare("");
     setSquarePanel(false);
   }
 
@@ -71,7 +75,24 @@ const SquareList = ({uid}) =>{
       }else if(!themeSquare){
           setErrorTheme("Please choose a Square theme!")
       }else{
-      const userId = uid;
+      if(!userData.quantity){
+        const userId = uid;
+      const quantity = 1; 
+      const squareId = userId + quantity;
+      console.log(squareId);
+      await userSquareRef.update({
+        quantity: quantity
+      });
+      await userSquareRef.collection('square').doc(`${squareId}`).set({
+        id: `${squareId}`,
+        name: nameSquare,
+        theme: themeSquare,
+        status: false
+      });
+      
+      setSquarePanel(false);
+      }else{
+        const userId = uid;
       const quantity = userData.quantity + 1; 
       const squareId = userId + quantity;
       console.log(squareId);
@@ -87,8 +108,21 @@ const SquareList = ({uid}) =>{
       
       setSquarePanel(false);
       }
+      }
       
     }
+  }
+
+  const editSquare = (squareId) =>{
+    const updateData = {
+      mode: "edit",
+      squareId: squareId,
+    }
+    localStorage.setItem("edit", JSON.stringify(updateData));
+    console.log(squareId);
+    router.push({
+      pathname: '/squares/squareEdit'
+    });
   }
 
   return(
@@ -111,7 +145,9 @@ const SquareList = ({uid}) =>{
           {errorTheme && <div className="alert alert-danger" role="alert">{errorTheme}</div>}
           </FormControl>
           </div>
-          <div className="themePreview" style={{position: "relative", width: "20%", margin: "auto", marginTop: "0", paddingBottom: "20%",border: "1px solid black"}}><DefaultTheme /></div>
+          {themeSquare && (<div className="themePreview" style={{position: "relative", width: "20%", margin: "auto", marginTop: "0", paddingBottom: "20%"}}>
+            <div style={{position: "absolute"}} ><DefaultTheme /></div>
+          </div>)}
         </div>
         <div className="squareButtonPanel" style={{position: "relative", textAlign: "center", height: "10%", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-evenly", backgroundColor: "rgba(252, 164, 0, 0.493)"}}>
           
@@ -126,7 +162,7 @@ const SquareList = ({uid}) =>{
       )}
       <div className="createSquareButton" style={{position: "relative", textAlign: "center", width: "100%",height: "10%", display: "flex", alignItems: "center", justifyContent: "space-evenly"}}>
       {userData && (
-        userData.quantity === 0 && (
+        !userData.quantity && (
         <Button variant="contained" color="primary" onClick={()=>openSquarePanel()} >
            My first Square
         </Button>
@@ -143,11 +179,13 @@ const SquareList = ({uid}) =>{
         </Button>
       </div>
       <div className="squareList" style={{position: "relative", textAlign: "center", height: "40%", width: "100%", display: "flex", alignItems: "center", backgroundColor: "blue"}}>
-          <div style={{position: "relative", width: "100%", display: "flex",flexDirection: "row", backgroundColor: "red",overflow: "auto"}}>
+          <div style={{position: "relative", width: "100%", display: "flex",flexDirection: "row", backgroundColor: "black", justifyContent: "center", overflow: "auto"}}>
           {squareListCollection && (squareListCollection.map(square=>
-                  <div key={square.id}  style={{position: "relative", minWidth: "25%", paddingBottom: "25%", backgroundColor: "white", margin: "auto"}}>
+                  <div key={square.id}  style={{position: "relative", width: "25%", paddingBottom: "25%", backgroundColor: "white", marginRight: "1%"}} onClick={()=>editSquare(square.id)} >
                   <div style={{position: "absolute", width: "100%", height: "100%", border: "1px solid black"}}>
-                  </div>
+                  <DefaultTheme/>
+                      
+                      </div>
                 </div>
                 ))}
           

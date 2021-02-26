@@ -24,10 +24,10 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <Head>
+      <meta name="viewport" content="width=device-width, initial-scale=1"></meta>
         <title>SquaryLife</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
       <main className={styles.main}>
         <div className="screenWrapper" style={{position: "relative",height: "100vh",width: "100%", margin: "auto", display: "flex", backgroundColor: "black"}}>
           <div className={styles.screen} style={{ position: "relative", display: "flex", flexDirection: "row", flexWrap: "wrap", width: "100vh", margin: "auto"}}>
@@ -36,11 +36,11 @@ export default function Home() {
               <Start/>
               </div>
 
-      {tilesArray.map((tiles, index)=>(
+            {tilesArray.map((tiles, index)=>(
             <div key={tiles} style={{position: "relative", minWidth: "20%", paddingBottom: "20%", backgroundColor: "white"}}>
                
             </div>
-        ))}
+            ))}
       </div>
         
         </div>

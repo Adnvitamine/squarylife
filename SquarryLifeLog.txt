@@ -1,0 +1,38 @@
+bubblehub
+
+
+bubblehub.com/:companyName_Bubble/:id/floor_Bubble/:id/:room_Bubble/:id
+
+CompanyName_Bubble/index.js - reception service
+
+Bubble_Master 
+
+
+chapter one: (front-end css) set up screen: the perfect square
+
+
+chapter two: (backend firebase) Sign in and auth with google
+
+firebaseConfig = {
+    apiKey: "AIzaSyBkCwwhkZNuKSUBFmLntlEPezVinVz2_zs",
+    authDomain: "bubblehub-6f79b.firebaseapp.com",
+    projectId: "bubblehub-6f79b",
+    storageBucket: "bubblehub-6f79b.appspot.com",
+    messagingSenderId: "350029321684",
+    appId: "1:350029321684:web:60e160669e7e58c5a57241",
+    measurementId: "G-V765EZ0Z57"
+  };
+
+
+
+// first step: create frame and border
+
+I need index + login component
+
+chapter three manage users crud
+
+6-26-32-37-43-7-8
+
+
+12  -23-34-39  48  5-10
+
