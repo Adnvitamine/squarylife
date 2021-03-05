@@ -7,6 +7,7 @@ import { withRouter } from "next/router";
 
 import ChairRight from "../sprites/furnitures/chair";
 import StorageDown from "../sprites/furnitures/storage";
+import Window, {WindowNcurtainRed} from "../sprites/furnitures/window";
 
 import firebase from "firebase/app";
 import "firebase/firestore";
@@ -47,7 +48,9 @@ const SquareEdit = ({router}) => {
       console.log("No Access")
       console.log(editLocal);
       history.push('../')
-    }else{
+    }
+    else
+    {
       setUserStorage(userLocal);
       setEditStorage(editLocal);
     }
@@ -60,16 +63,15 @@ const SquareEdit = ({router}) => {
       const squareListRef = firestore.collection('squares').doc(userStorage.uid).collection('square').doc(editStorage.squareId);
 
       setSquareListQuery(squareListRef);
-      }
+    }
   }, [userStorage, editStorage]);
 
   useEffect(() => {
     if (userSquareData) {
-      if(userSquareData.data){
-        
-      setObjectPlacement(userSquareData.data);
+      if(userSquareData.data){ 
+        setObjectPlacement(userSquareData.data);
       }
-      }
+    }
   }, [userSquareData]);
   /*
   
@@ -116,7 +118,8 @@ const SquareEdit = ({router}) => {
                       37,38,39,40,41  
                     ];
     const totalRow = rowOne.concat(rowTwo).concat(rowThree);
-    const objectTile = ["empty","chair", "storage"];
+    const objectTile = ["empty", "chair", "storage"];
+    const objectWall = ["empty", "window", "windowNcurtainRed"];
     if(tile){
       if(totalRow.includes(tile)){
         if(rowThree.includes(tile)){
@@ -128,7 +131,7 @@ const SquareEdit = ({router}) => {
           setFocusTile(tile);
           setObjectVisibility("visible");
           setObjectHeight("15%");
-          setObjectBar(["","",""]);
+          setObjectBar(objectWall);
         }
       }
     }
@@ -144,15 +147,6 @@ const SquareEdit = ({router}) => {
         setEditor(true);
       }else{
         if(focusTile){
-          /*if(objectPlacement){
-            const data = [...objectPlacement];
-            const i = data.findIndex(object => object.position === focusTile);
-            console.log(data[i].position);
-            console.log(focusTile);
-            if(data && data[i].position === focusTile){
-              console.log("change Direction");
-            }
-          }*/
           if(objectPlacement){
             const data = [...objectPlacement];
             const i = data.findIndex(object => object.position === focusTile);
@@ -164,53 +158,56 @@ const SquareEdit = ({router}) => {
                 console.log(data[i].type);
                 console.log(tile);
                 console.log("change Direction");
-              }else{
-              setObjectHeight("0%");
-              setObjectVisibility("hidden");
-              setFocusTile();
               }
-            }else{
+              else
+              {
+                setObjectHeight("0%");
+                setObjectVisibility("hidden");
+                setFocusTile();
+              }
+            }
+            else
+            {
               setObjectHeight("0%");
               setObjectVisibility("hidden");
               setFocusTile();
             }
-            
-          
           }
-
-        }else{
-          
-          if(tile){
-          if(tile === 46){
-            if(objectPlacement){
-              console.log(userStorage.uid);
-              console.log(editStorage.squareId);
-              await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${editStorage.squareId}`).update({
-               data: objectPlacement
-              });
-            }
-            history.push('../');
-          }else{
-            console.log(tile);
-            editObject(tile);
-
-          if(editor === true ){
-            console.log("start editor");
-          }
-
-         }
         }
+        else
+        {  
+          if(tile){
+            if(tile === 46){
+              if(objectPlacement){
+                console.log(userStorage.uid);
+                console.log(editStorage.squareId);
+                await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${editStorage.squareId}`).update({
+                data: objectPlacement
+                });
+              }
+              localStorage.removeItem("edit");
+              history.push('../');
+            }
+            else
+            {
+              console.log(tile);
+              editObject(tile);
+              if(editor === true ){
+                console.log("start editor");
+              }
+            }
+          }
         }
       }
     }
   }
 
   const handleHoverTile = (tile) =>{
-   if(editor){
-    if(tile){
-      setHoverTile(tile);
+    if(editor){
+      if(tile){
+        setHoverTile(tile);
+      }
     }
-   }
   }
 
   const placeObject = (focusTile, object) =>{
@@ -218,25 +215,28 @@ const SquareEdit = ({router}) => {
       console.log(focusTile);
       console.log(object);
       //const objectData = objectPlacement;
-      
       if(objectPlacement){
         const data = [...objectPlacement];
         const i = data.findIndex(object => object.position === focusTile);
         console.log(i);
-        if (data[i]){
-           data[i] = {position: focusTile,
-           type: object};
-          
-          } else {
-            data.push({position: focusTile,
-              type: object});
-          }
+        if(data[i]){
+           data[i] = {
+                      position: focusTile,
+                      type: object,
+                      solid: object === "chair" && focusTile
+                     };
+        } 
+        else
+        {
+          data.push({
+                      position: focusTile,
+                      type: object,
+                      solid: object === "chair" && focusTile
+                    });
+        }
         console.log(data);
-        setObjectPlacement(data);
-        
+        setObjectPlacement(data);        
       }
-      //setObjectPlacement(objectData);
-      //setObjectType(object);
     }
   }
 
@@ -247,112 +247,152 @@ const SquareEdit = ({router}) => {
         <title>Edit Square</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
       <main className={styles.main}>
-        <div className="screenWrapper" style={{position: "relative",height: "100vh",width: "100%", margin: "auto", display: "flex", backgroundColor: "black"}}>
-          <div className={styles.screen} style={{ position: "relative", display: "flex", flexDirection: "row", flexWrap: "wrap", width: "90vh", margin: "auto"}}>
-            <div className="tiles" style={{position: "absolute", display: "flex",flexDirection: "row", flexWrap: "wrap", width: "100%", zIndex: "10"}}>
-              {tilesArray.map((tile)=>(
+          <div className="screenWrapper" style={{position: "relative",height: "100vh",width: "100%", margin: "auto", display: "flex", backgroundColor: "black"}}>
+            <div className={styles.screen} style={{ position: "relative", display: "flex", flexDirection: "row", flexWrap: "wrap", width: "90vh", margin: "auto"}}>
+              <div className="tiles" style={{position: "absolute", display: "flex",flexDirection: "row", flexWrap: "wrap", width: "100%", zIndex: "10"}}>
+                {tilesArray.map((tile)=>(
                   <div className={styles.soloTile} key={tile} style={{position: "relative" ,width: "14.28%", paddingBottom: "14.28%", 
                                                                       backgroundColor: `${tile === focusTile && "rgba(49,200,51,0.39)" 
                                                                       || tile === hoverTile && "rgba(49,48,51,0.39)" 
                                                                       || backgroundTiles}`, zIndex: "15", 
                                                                       transition: "background-color 0.5s linear"}} 
                                                                       onMouseOver={()=>handleHoverTile(tile)} onClick={()=>handleTiles(tile)}>
-                  {objectPlacement && (objectPlacement.map((object, index)=> <div key={index} style={{position: "absolute", width: "100%", height: "100%",margin: "auto"}}>
-                    {tile === object.position && 
-                      (
-                          (object.type === "chair" && 
-                          <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
-                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-60%", margin: "auto"}}>
-                            <ChairRight/>
-                            </div>
-                          </div>
-                          )
-                          ||
-                          (object.type === "empty" && 
+                    {objectPlacement && (objectPlacement.map((object, index)=> 
+                     <div key={index} style={{position: "absolute", width: "100%", height: "100%",margin: "auto"}}>
+                      {tile === object.position && 
+                         (  
+                            (object.type === "empty" && 
                             <div style={{position: "relative", width: "100%", height: "100%", display: "flex", justifyContent: "center"}}>
                             </div>
-                          )
-                          ||
-                          (object.type === "storage" && 
+                            )
+                            ||
+                            (object.type === "chair" &&
+                            <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                              <div style={{position: "absolute", width: "100%", height: "100%", top: "-60%", margin: "auto"}}>
+                                <ChairRight/>
+                              </div>
+                            </div> 
+                            )
+                            ||
+                            (object.type === "storage" &&
                             <div style={{position: "relative", width: "100%", height: "100%", top: "-75%", display: "flex", justifyContent: "center"}}>
                               <div style={{position: "absolute", width: "100%", height: "100%", margin: "auto"}}>
-                              <StorageDown/>
+                                <StorageDown/>
                               </div>
-                            </div>
-                          )
-                      ) 
-                    }
-                      </div>
-                      ))}
+                            </div> 
+                            )
+                            ||
+                            (object.type === "window" &&
+                            <div style={{position: "relative", width: "100%", height: "100%", top: "-50%", display: "flex", justifyContent: "center"}}>
+                              <div style={{position: "absolute", width: "100%", height: "100%", margin: "auto"}}>
+                                <Window/>
+                              </div>
+                            </div> 
+                            )
+                            ||
+                            (object.type === "windowNcurtainRed" &&
+                            <div style={{position: "relative", width: "100%", height: "100%", top: "-40%", left: "-12%",display: "flex", justifyContent: "center"}}>
+                              <div style={{position: "absolute", width: "100%", height: "100%", margin: "auto"}}>
+                                <WindowNcurtainRed/>
+                              </div>
+                            </div> 
+                            )
+                          ) 
+                       }
+                     </div>
+                    ))}
                   </div>
                 ))}
               </div>
 
-            {objectVisibility && (
-              <div className="objectVisibility" style={{position: "absolute", width: `100%`, height: `21.42%`, top: "0%", left: "0%", display: "flex", alignItems: "center",
-                                                        visibility: `${objectVisibility}`, transition: "visibility 0.5s linear"}}>
-                
-                <div className="objectListPanel" style={{position: "relative", width: "100%",display: "flex",
-                               flexDirection: "row", overflow: "auto",  backgroundColor: "rgba(999,999,999,0.4)", zIndex: "20", transition: "height 0.5s linear"}}>
-                
-                {objectBar && (objectBar.map((object,index)=>
-                        <div key={index} style={{position: "relative", minWidth: "15%", 
-                                                  paddingBottom: `${objectHeight && objectHeight || "0%"}`, 
-                                                  margin: "1%", backgroundColor: "white", transition: "padding-bottom 0.5s linear"}} >
-                              {object === "chair" && 
-                                (
-                                  <div style={{position: "absolute", width: "100%", height: "100%",margin: "auto"}}>
-                                    <div style={{position: "relative", width: "100%", height: "100%", display: "flex", justifyContent: "center"}} onClick={()=>placeObject(focusTile, object)}>
-                                      <ChairRight/>
-                                    </div>
-                                  </div>
-                                )
-                                || object === "storage" && (
-                                  <div style={{position: "absolute", width: "100%", height: "100%",margin: "auto"}}>
-                                    <div style={{position: "relative", width: "100%", height: "100%", display: "flex", justifyContent: "center"}} onClick={()=>placeObject(focusTile, object)}>
-                                      <StorageDown/>
-                                    </div>
-                                  </div>
-                                )|| object === "empty" && (
-                                  <div style={{position: "absolute", width: "100%", height: "100%",margin: "auto"}}>
-                                    <div style={{position: "relative", width: "100%", height: "100%", display: "flex", justifyContent: "center"}} onClick={()=>placeObject(focusTile, object)}>
-                                      
-                                    </div>
-                                  </div>
-                                )}
-                        </div>
-                  ))}
-                </div>
-                  
-
+              {objectVisibility && (
+                <div className="objectVisibility" style={{
+                  position: "absolute", width: `100%`, height: `21.42%`, top: "0%", left: "0%", 
+                  display: "flex", alignItems: "center", visibility: `${objectVisibility}`, transition: "visibility 0.5s linear"
+                }}>
+                  <div className="objectListPanel" style={{
+                    position: "relative", width: "100%",display: "flex", flexDirection: "row", overflow: "auto",  
+                    backgroundColor: "rgba(999,999,999,0.4)", zIndex: "20", transition: "height 0.5s linear"
+                  }}>
+                    {objectBar && (objectBar.map((object,index)=>
+                      <div key={index} style={{
+                        position: "relative", minWidth: "15%", paddingBottom: `${objectHeight && objectHeight || "0%"}`, 
+                        margin: "1%", backgroundColor: "white", transition: "padding-bottom 0.5s linear"
+                      }}>
+                        {object === "chair" && 
+                          (
+                            <div style={{position: "absolute", width: "100%", height: "100%",margin: "auto"}}>
+                              <div style={{position: "relative", width: "100%", height: "100%", display: "flex", justifyContent: "center"}} onClick={()=>placeObject(focusTile, object)}>
+                                <ChairRight/>
+                              </div>
+                            </div>
+                          )
+                        || object === "storage" && 
+                          (
+                            <div style={{position: "absolute", width: "100%", height: "100%",margin: "auto"}}>
+                              <div style={{position: "relative", width: "100%", height: "100%", display: "flex", justifyContent: "center"}} onClick={()=>placeObject(focusTile, object)}>
+                                <StorageDown/>
+                              </div>
+                            </div>
+                          )
+                        || object === "window" && 
+                          (
+                            <div style={{position: "absolute", width: "100%", height: "100%",margin: "auto"}}>
+                              <div style={{position: "relative", width: "100%", height: "100%", display: "flex", justifyContent: "center"}} onClick={()=>placeObject(focusTile, object)}>
+                                <Window/>
+                              </div>
+                            </div>
+                          ) 
+                        || object === "windowNcurtainRed" && 
+                        (
+                          <div style={{position: "absolute", width: "100%", height: "100%",margin: "auto"}}>
+                            <div style={{position: "relative", width: "100%", height: "100%", display: "flex", justifyContent: "center"}} onClick={()=>placeObject(focusTile, object)}>
+                              <WindowNcurtainRed/>
+                            </div>
+                          </div>
+                        )
+                        || object === "empty" && 
+                          (
+                            <div style={{position: "absolute", width: "100%", height: "100%",margin: "auto"}}>
+                              <div style={{position: "relative", width: "100%", height: "100%", display: "flex", justifyContent: "center"}} onClick={()=>placeObject(focusTile, object)}>
+                                
+                              </div>
+                            </div>
+                          )
+                        }
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
-            {helperVisibility && (<div className="helperVisibility" style={{position: "absolute", width: `60%`, top: "40%", left: "20%", display: "flex",
-                                                        justifyContent: "center", alignItems: "center", textAlign: "center",
-                                                        padding: "1%", backgroundColor: "white", zIndex: "20", borderRadius: "10px", border: "4px solid black", visibility: `${helperVisibility}`, transition: "visibility 0.5s linear"}}>
-                <h1>Click on a tile to customise your square</h1>
+              {helperVisibility && (
+                <div className="helperVisibility" style={{
+                  position: "absolute", width: `60%`, top: "40%", left: "20%", display: "flex", justifyContent: "center", 
+                  alignItems: "center", textAlign: "center", padding: "1%", backgroundColor: "white", zIndex: "20", borderRadius: "10px",
+                  border: "4px solid black", visibility: `${helperVisibility}`, transition: "visibility 0.1s linear"
+                }}>
+                  <h1>Click on a tile to customise your square</h1>
                 </div>
               )}
-            <div className="themeSquare" style={{ position: "relative", width: "100%",display: "flex"}}>
-              <DefaultTheme/>
+              <div className="themeSquare" style={{ position: "relative", width: "100%",display: "flex"}}>
+                <DefaultTheme/>
+              </div>
             </div>
           </div>
-        </div>
-      </main>
+        </main>
 
-      <footer className={styles.footer}>
+        <footer className={styles.footer}>
         <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+          href="https://doanstack.herokuapp.com/"
           target="_blank"
           rel="noopener noreferrer"
         >
-          Powefocus by{' '}
-          <img src="/vercel.svg" alt="Vercel Logo" className={styles.logo} />
+          Powered by{' '}
+          Doan Nguyen
         </a>
       </footer>
-    </div>
+  </div>
   )
 }
 

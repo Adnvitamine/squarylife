@@ -1,22 +1,32 @@
 import { useState, useEffect } from "react";
+
+// SquareList Component Import
+import SquareList from "./squares/squareList";
+
+// Sprites Component Import
+import MainChar, {MainCharUp, MainCharRight, MainCharLeft} from "./sprites/characters/mainChar/mainChar";
+
+// Material UI Component Import
 import {Button} from '@material-ui/core';
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
 import DialogTitle from '@material-ui/core/DialogTitle';
+
+// All Needed Firebase Component Import
 import firebase from "firebase/app";
 import "firebase/auth";
 import "firebase/firestore";
 import initFirebase from "./api/firebase";
-
-//import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
-import SquareList from "./squares/squareList";
-import MainChar from "./sprites/characters/mainCharacter/mainChar";
+// We could import useAuthState from React Firebase Hooks for auth, but in our case, it won't be necessary
+//import { useAuthState } from 'react-firebase-hooks/auth';
 
+// Initialisation for Firebase
 initFirebase();
 
+// Connection to Cloud Firestore
 //const auth = firebase.auth();
 const firestore = firebase.firestore();
 
@@ -24,92 +34,101 @@ const Start = () => {
 
   //const [userAuth] = useAuthState(auth);
   const [userStorage, setUserStorage] = useState();
-  const [open, setOpen] = useState(false);
-  // reference for registered users collection in firestore
+  const [openDialog, setOpenDialog] = useState(false);
+
+  // hooks for REGISTERED USERS COLLECTION in firestore
   const usersRef = firestore.collection('users');
   const usersQuery = usersRef.orderBy('name');
   const [usersCollection] = useCollectionData(usersQuery, {idField: 'id'});
 
-  // reference for online-users in firestore
+  // hooks for ONLINE-USERS COLLECTION in firestore
   const onlineUsersRef = firestore.collection('online-users');
   const onlineUsersQuery = onlineUsersRef.orderBy('name');
   const [onlineUsersCollection] = useCollectionData(onlineUsersQuery, {idField: 'id'});
 
-  // Reference to user squares in firestore
+  // hooks for all USERS in SQUARES COLLECTION in firestore
   const squaresRef = firestore.collection('squares');
   const squaresQuery = squaresRef.orderBy('uid');
   const [squaresCollection] = useCollectionData(squaresQuery, {idField: 'id'});
   
+  // hooks for all Squares in USER's SQUARE COLLECTION in firestore
   const [squareListQuery, setSquareListQuery] = useState();
   const [squareListCollection] = useCollectionData(squareListQuery, {idField: 'id'});
+
+  //
   
 
+  const [direction, setDirection] = useState("downDirection");
+  
+  
   const handleAuthentication = async (e) =>{
-      
-      e.preventDefault();
+    //e.preventDefault();
+    // GOOGLE AUTHENTIFICATION WITH POPUP
       const provider = new firebase.auth.GoogleAuthProvider();
       const result = await firebase.auth().signInWithPopup(provider);
       const { user, credentials } = result;
       console.log(user);
+      if (!user){
+        throw new Error('Issue Authorising');
+      }
+
+    // REGISTER USER INFORMATION FROM GOOGLE IN LOCALSTORAGE (UID, USERNAME, EMAIL)
       const uid = user.uid;
       const updateData = {
-        uid: user.uid,
+        uid: uid,
         username: user.displayName,
         email: user.email,
       };
       setUserStorage(updateData);
       localStorage.setItem("user", JSON.stringify(updateData));
       
+    // CHECK IF USER IS IN USER COLLECTION ELSE REGISTER THE USER IN THE COLLECTION
       if(usersCollection){
       const listUid = [];
-      //e.preventDefault();
         try {
-        for(let i = 0; i < usersCollection.length; i++){
-        console.log(usersCollection[i].uid);
-        listUid.push(usersCollection[i].uid);
-        }
-
-        if(listUid.includes(user.uid) === true){
-          console.log("user already in Database");
-        }
-        else{
-          
-          console.log("create User");
-          await usersRef.doc(`${uid}`).set({
-            uid: user.uid,
-            name: user.displayName,
-            email: user.email,
-          });
-
-        }
-        
+        // LOOP THROUGH THE COLLECTION AND PUSH ALL USERS IN listUid ARRAY
+          for(let i = 0; i < usersCollection.length; i++){
+          console.log(usersCollection[i].uid);
+          listUid.push(usersCollection[i].uid);
+          }
+        // COMPARE IF USER UID IS IN THE LIST ELSE CREATE THE USER
+          if(listUid.includes(user.uid) === true){
+            console.log("user already in Database");
+          }
+          else{
+            console.log("create User");
+            await usersRef.doc(`${uid}`).set({
+              uid: user.uid,
+              name: user.displayName,
+              email: user.email,
+            });
+          }
         } catch (error) {
           console.error(error.message);
         }
       }else{
         console.log("no usersCollection");
       }
-
+    
+    // CHECK IF USER IS IN SQUARES COLLECTION ELSE REGISTER USER
       if(squaresCollection){
         const listUid = [];
-        //e.preventDefault();
           try {
-          for(let i = 0; i < squaresCollection.length; i++){
-          console.log(squaresCollection[i].uid);
-          listUid.push(squaresCollection[i].uid);
+          // LOOP THROUGH THE COLLECTION AND PUSH ALL USERS IN listuid ARRAY
+            for(let i = 0; i < squaresCollection.length; i++){
+            console.log(squaresCollection[i].uid);
+            listUid.push(squaresCollection[i].uid);
           }
-  
-          if(listUid.includes(user.uid) === true){
-            console.log("user already in Database");
-          }
-          else{
-            
-            console.log("create User");
-            await squaresRef.doc(`${uid}`).set({
-              uid: user.uid
-            });
-          }
-          
+          // COMPARE IF USER UID IS IN THE COLLECTION ELSE CREATE THE USER
+            if(listUid.includes(user.uid) === true){
+              console.log("user already in Database");
+            }
+            else{
+              console.log("create User");
+              await squaresRef.doc(`${uid}`).set({
+                uid: user.uid
+              });
+            }
           } catch (error) {
             console.error(error.message);
           }
@@ -117,93 +136,110 @@ const Start = () => {
           console.log("no squaresCollection");
         }
 
-
+    // CHECK IF USER IS IN ONLINE-USERS COLLECTION ELSE REGISTER THE USER AS ONLINE
       if(onlineUsersCollection){
-      const listUid = [];
-      //e.preventDefault();
-        try {
-          
-          for(let i = 0; i < onlineUsersCollection.length; i++){
-          console.log(onlineUsersCollection[i].uid);
-          listUid.push(onlineUsersCollection[i].uid);
+        const listUid = [];
+          try {
+          // LOOP THROUGH ONLINE-USERS COLLECTION AND PUSH ALL USERS IN listUid ARRAY
+            for(let i = 0; i < onlineUsersCollection.length; i++){
+            console.log(onlineUsersCollection[i].uid);
+            listUid.push(onlineUsersCollection[i].uid);
           }
-          
-          if(listUid.includes(user.uid) === true ){
-            console.log("user already in Database");
-          }else{
-            console.log("create onlineUser");
-            await onlineUsersRef.doc(`${uid}`).set({
-              uid: user.uid,
-              name: user.displayName,
-              email: user.email,
-            });
-          }
-
-        } catch (error) {
+          // COMPARE IF USER UID IS IN THE COLLECTION ELSE CREATE USER
+            if(listUid.includes(user.uid) === true ){
+              console.log("user already in Database");
+            }else{
+              console.log("create onlineUser");
+              await onlineUsersRef.doc(`${uid}`).set({
+                uid: user.uid,
+                name: user.displayName,
+                email: user.email,
+              });
+            }
+          } catch (error) {
           console.error(error.message);
-        }
-
+          }
       }else{
         console.log("no OnlineUsersCollection");
       }
-
-      if (!user){
-        throw new Error('Issue Authorising');
-      }
   };
 
- 
+  const handleOpenDialog = () => {
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
   
-  // Unsubscribe Function to delete user from database and online User and later all squaresInformation
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
+  // Unsubscribe Function to delete user from USERS COLLECTION, ONLINE-USERS COLLECTION, SQUARES COLLECTION && USERSQUARE COLLECTIONs
   const DeleteUser = async () =>{
-    setOpen(false);
-
-    console.log(squareListCollection.length);
+    setOpenDialog(false);
     if(userStorage){
       if(squareListCollection){
+        console.log(squareListCollection.length);
         for(let i = 0; i < squareListCollection.length; i++){
           const squareUid = userStorage.uid + (i+1);
           console.log(squareUid);
-          
-          const deleteUserSquareCollection = await squaresRef.doc(userStorage.uid).collection('square').doc(squareUid).delete();
+          await squaresRef.doc(userStorage.uid).collection('square').doc(squareUid).delete();
         }
       }
-    
-      const deleteUserSquare = await squaresRef.doc(userStorage.uid).delete();
-      const deleteUser = await usersRef.doc(userStorage.uid).delete();
-      const deleteOnlineUser = await onlineUsersRef.doc(userStorage.uid).delete();
+      await squaresRef.doc(userStorage.uid).delete();
+      await usersRef.doc(userStorage.uid).delete();
+      await onlineUsersRef.doc(userStorage.uid).delete();
       setUserStorage();
       localStorage.removeItem("user");
     }else{
-      console.log("something when wrong")
+      console.log("something whent wrong")
     }
-    /*
-    const deleteUserSquare = await squaresRef.doc(userStorage.uid).delete();
-    const deleteUser = await usersRef.doc(userStorage.uid).delete();
-    const deleteOnlineUser = await onlineUsersRef.doc(userStorage.uid).delete();
-    setUserStorage();
-    localStorage.removeItem("user");
-    */
-    
   }
 
   // Logout handler
   const handleLogOut = async () =>{
-    const deleteOnlineUser = await onlineUsersRef.doc(userStorage.uid).delete();
-    const logOutGoogle = await firebase.auth().signOut();
+    await onlineUsersRef.doc(userStorage.uid).delete();
+    await firebase.auth().signOut();
     setUserStorage();
     localStorage.removeItem("user");
     localStorage.removeItem("edit");
-    // window.location = "";
+    localStorage.removeItem("visit");
   }
+
+  const keyControl = (event) =>{
+    console.log(event);
+    if(!event.repeat){
+      switch(event.key){
+        case "ArrowUp":
+            if(direction){
+              setDirection("upDirection");
+            }
+            break;
+        case "ArrowDown":
+            if(direction){
+              setDirection("downDirection");
+            }
+            break;
+        case "ArrowLeft":
+            if(direction){
+              setDirection("leftDirection");
+            }
+            break;
+        case "ArrowRight":
+            if(direction){
+              setDirection("rightDirection");
+            }
+            break;
+        default:
+      }
+    }
+  }
+  
+  
+  useEffect(()=>{
+      window.addEventListener('keydown', keyControl);
+    return () => window.removeEventListener('keydown', keyControl);
+    
+  }, [ keyControl ]);
 
   // useEffect to get localStorage from user in case of refresh
   useEffect(()=>{
@@ -216,18 +252,16 @@ const Start = () => {
   useEffect(() => {
     if (userStorage) {
       console.log(userStorage);
-      
       const squareListRef = firestore.collection('squares').doc(userStorage.uid).collection('square');
       const squareListQuery = squareListRef.orderBy('name');
-
       setSquareListQuery(squareListQuery);
       }
   }, [userStorage]);
 
     return(
         <>
-        <div className="squareAppTitle">
-                <h1 style={{marginBottom:"0"}}>SquaryLife</h1>
+        <div className="squareAppTitle" style={{width: "100%", padding: "1%", backgroundColor: "RGBA(0,196,255,0.50)"}}>
+                <h1 style={{marginBottom:"0", marginTop: "0", color: "white"}}>SquaryLife</h1>
                 <p>{usersCollection && (
                         usersCollection.length < 2 && (
                         `${usersCollection.length} user subscribed`
@@ -245,7 +279,7 @@ const Start = () => {
                                                     width: "100%",
                                                     display: "flex",
                                                     flexDirection: "column",
-                                                    border: "1px solid black",
+                                                    backgroundColor: "white",
                                                      alignItems: "center",
                                                     justifyContent: "center"
                                                   }}>
@@ -257,22 +291,46 @@ const Start = () => {
                                                     margin: "auto",
                                                     width: "90%",
                                                     height: "90%",
-                                                    border: "2px solid black",
-                                                    borderRadius: "1%",
-                                                    alignItems: "center"}}>
+                                                    alignItems: "center", boxShadow: "1px 0px 3px 1px rgba(0,0,0,0.50)"}}>
                       <div className="userInfoPanel" style={{
                                                               position: "relative",
                                                               width: "100%",
                                                               height: "100%",
-                                                              display: "flex", 
-                                                              flexDirection: "column", 
-                                                              backgroundColor: "rgba(252, 235, 0, 0.589)"}}>
-                        <div className="UserLog" style={{position: "relative", textAlign: "center", width: "100%", height: "50%", display: "flex", flexDirection: "column", border: "1px solid black"}}>
-                          <h1 style={{margin: "1% 0%"}}>Log Square</h1>
+                                                              display: "flex",
+                                                              borderRadius: "1%",
+                                                              flexDirection: "column"
+                                                              }}>
+                        <div className="UserLog" style={{position: "relative", textAlign: "center", width: "100%", height: "50%", display: "flex", flexDirection: "column", backgroundColor: "RGBA(0,196,255,0.50)"}}>
+                          <h1 style={{margin: "1% 0%", color: "white"}}>Log Square</h1>
                           <p>{userStorage  && (`Welcome ${userStorage.username}`)}</p>
                           <p>{userStorage  && (`Square_id: ${userStorage.uid}`)}</p>
-                          <div className="avatarPreview" style={{position: "relative", width: "10%", margin: "auto", marginTop: "0",marginBottom: "0", paddingBottom: "10%",border: "1px solid black"}}>
-                            <div style={{position: "absolute", height: "100%", width: "100%", margin: "0", display: "flex"}}><MainChar/></div>
+                          <div className="avatarPreview" style={{position: "relative", width: "10%", margin: "auto", marginTop: "1%",marginBottom: "1%", paddingBottom: "10%", backgroundColor: "white", boxShadow: "1px 0px 3px 1px rgba(0,0,0,0.50)"}}>
+                              <div style={{position: "absolute", height: "100%", width: "100%", margin: "0", display: "flex"}}>
+                                  {direction === "upDirection" && 
+                                        (
+                                        <MainCharUp/>
+                                        ) 
+                                        || 
+                                      direction === "downDirection" && 
+                                        (
+                                          <MainChar/>
+                                        )
+                                        || 
+                                      direction === "leftDirection" && 
+                                      (
+                                        <MainCharLeft/>
+                                      ) 
+                                      || 
+                                      direction === "rightDirection" && 
+                                      (
+                                        <MainCharRight/>
+                                      ) 
+                                      || 
+                                      (
+                                        <MainChar/>
+                                      )
+                                    }
+                              </div>
                           </div>
                           <div className="userAddFriendButton" style={{
                                                                         position: "relative", 
@@ -282,7 +340,7 @@ const Start = () => {
                                                                         alignItems: "center", 
                                                                         justifyContent: "space-evenly",
                                                                         margin: "1% 0% 0% 0%"}}>
-                            <Button variant="contained" style={{backgroundColor: "orange"}}>Change Avatar</Button>
+                            <Button variant="contained" style={{backgroundColor: "orange"}}>Confirm Avatar</Button>
                           </div>
                           <div className="userDeleteButton" style={{
                                                                     position: "relative",
@@ -292,10 +350,10 @@ const Start = () => {
                                                                     alignItems: "center", 
                                                                     justifyContent: "space-evenly",
                                                                     margin: "1% 0% 0% 0%"}}>
-                            <Button variant="contained" color="secondary" onClick={()=>handleClickOpen()}>Delete User</Button>
+                            <Button variant="contained" color="secondary" onClick={()=>handleOpenDialog()}>Delete User</Button>
                             <Dialog
-                              open={open}
-                              onClose={handleClose}
+                              open={openDialog}
+                              onClose={handleCloseDialog}
                               aria-labelledby="alert-dialog-title"
                               aria-describedby="alert-dialog-description"
                             >
@@ -309,7 +367,7 @@ const Start = () => {
                                 <Button onClick={()=>DeleteUser()} color="primary" autoFocus>
                                   Agree
                                 </Button>
-                                <Button onClick={handleClose} color="primary">
+                                <Button onClick={handleCloseDialog} color="primary">
                                   Disagree
                                 </Button>
                               </DialogActions>
@@ -322,7 +380,7 @@ const Start = () => {
                 )}
               </div>
               
-              <div style={{position: "relative", textAlign: "center", height: "10%", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid black"}}>
+              <div style={{position: "relative", textAlign: "center", height: "10%", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "RGBA(0,196,255,0.50)"}}>
                 
                 {userStorage && (<Button variant="contained" color="secondary" onClick={()=>handleLogOut()} >Logout</Button>)
                 ||

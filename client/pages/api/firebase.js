@@ -3,14 +3,13 @@ import "firebase/auth";
 import "firebase/analytics";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBkCwwhkZNuKSUBFmLntlEPezVinVz2_zs",
-    authDomain: "bubblehub-6f79b.firebaseapp.com",
-    databaseURL: "https://bubblehub-6f79b-default-rtdb.firebaseio.com",
-    projectId: "bubblehub-6f79b",
-    storageBucket: "bubblehub-6f79b.appspot.com",
-    messagingSenderId: "350029321684",
-    appId: "1:350029321684:web:60e160669e7e58c5a57241",
-    measurementId: "G-V765EZ0Z57"
+    apiKey: "AIzaSyBrY_dFsjSKIutXgP9vdZyCc89c7agTeHg",
+    authDomain: "squarylife.firebaseapp.com",
+    projectId: "squarylife",
+    storageBucket: "squarylife.appspot.com",
+    messagingSenderId: "383443392076",
+    appId: "1:383443392076:web:57d783659c73bef0f086e9",
+    measurementId: "G-4QMJ713H9V"
   };
 
 

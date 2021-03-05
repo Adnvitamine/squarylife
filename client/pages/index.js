@@ -8,7 +8,7 @@ import Start from './start';
 export default function Home() {
   const maxTiles = 25;
   const [tilesArray, setTilesArray] = useState([]);
-  
+  const [audio, setAudio] = useState(false);
   
   
   useEffect(()=>{
@@ -18,6 +18,24 @@ export default function Home() {
     }
     setTilesArray(array);
   }, [maxTiles]);
+
+  const playAudio = (e) =>{
+    
+    if(e.target !== e.currentTarget){
+        return;
+      }else{
+        if(audio === false){
+          setAudio(true);
+            const audio = document.getElementById('a1');
+              audio.play();
+        }else if(audio === true){
+          setAudio(false);
+          const audio = document.getElementById('a1');
+          audio.pause();
+        }    
+      }
+    
+  }
 
   
 
@@ -29,7 +47,8 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className={styles.main}>
-        <div className="screenWrapper" style={{position: "relative",height: "100vh",width: "100%", margin: "auto", display: "flex", backgroundColor: "black"}}>
+        <audio id='a1' src='/song2.mp3'></audio>
+        <div className="screenWrapper" style={{position: "relative",height: "100vh",width: "100%", margin: "auto", display: "flex", backgroundColor: "black"}} onClick={(e)=>playAudio(e)} >
           <div className={styles.screen} style={{ position: "relative", display: "flex", flexDirection: "row", flexWrap: "wrap", width: "100vh", margin: "auto"}}>
         
             <div className="startScreen" style={{ position: "absolute", margin: "0", display: "flex", width: "100%", height: "100%", zIndex: "10", flexDirection:"column", alignItems: "center", border: "1px solid black", textAlign: "center"}}>
@@ -48,12 +67,12 @@ export default function Home() {
 
       <footer className={styles.footer}>
         <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+          href="https://doanstack.herokuapp.com/"
           target="_blank"
           rel="noopener noreferrer"
         >
           Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel Logo" className={styles.logo} />
+          Doan Nguyen
         </a>
       </footer>
     </div>
