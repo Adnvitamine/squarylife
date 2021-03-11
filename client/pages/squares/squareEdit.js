@@ -24,9 +24,11 @@ const firestore = firebase.firestore();
 const SquareEdit = ({router}) => {
   const history = useRouter();
   const maxTiles = 49;
+  const [audio, setAudio] = useState(false);
+  const [play, setPlay] = useState();
   const [tilesArray, setTilesArray] = useState([]);
-  const [userId, setUserId] = useState();
-  const [squareId, setSquareId] = useState();
+  //const [userId, setUserId] = useState();
+  //const [squareId, setSquareId] = useState();
   const [helperVisibility, setHelperVisibility] = useState("visible");
   const [objectVisibility, setObjectVisibility] = useState("hidden");
   const [objectHeight, setObjectHeight] = useState();
@@ -40,6 +42,29 @@ const SquareEdit = ({router}) => {
   const [objectPlacement, setObjectPlacement] = useState([]);
   const [squareListQuery, setSquareListQuery] = useState();
   const [userSquareData] = useDocumentData(squareListQuery, {idField: 'id'});
+
+  const playAudio = (e) =>{
+    
+    if(e.target !== e.currentTarget){
+        return;
+      }else{
+        if(audio === false){
+          setAudio(true);
+            const audio = document.getElementById('a1');
+            const interval = setInterval(()=>{
+              audio.play();
+            }, 500);
+            setPlay(interval);
+            
+        }else if(audio === true){
+          clearInterval(play);
+          setAudio(false);
+          const audio = document.getElementById('a1');
+          audio.pause();
+        }    
+      }
+    
+  }
   
   useEffect(()=>{
     const userLocal = JSON.parse(localStorage.getItem("user"));
@@ -118,7 +143,7 @@ const SquareEdit = ({router}) => {
                       37,38,39,40,41  
                     ];
     const totalRow = rowOne.concat(rowTwo).concat(rowThree);
-    const objectTile = ["empty", "chair", "storage"];
+    const objectTile = ["empty", "chair", "storage", "empty", "empty"];
     const objectWall = ["empty", "window", "windowNcurtainRed"];
     if(tile){
       if(totalRow.includes(tile)){
@@ -185,6 +210,11 @@ const SquareEdit = ({router}) => {
                 data: objectPlacement
                 });
               }
+              if(play){
+                clearInterval(play);
+                const audio = document.getElementById('a1');
+                audio.pause();
+              }
               localStorage.removeItem("edit");
               history.push('../');
             }
@@ -223,7 +253,8 @@ const SquareEdit = ({router}) => {
            data[i] = {
                       position: focusTile,
                       type: object,
-                      solid: object === "chair" && focusTile
+                      solid: object === "chair" && focusTile,
+                      solidVertical: object === "storage" && focusTile
                      };
         } 
         else
@@ -231,7 +262,8 @@ const SquareEdit = ({router}) => {
           data.push({
                       position: focusTile,
                       type: object,
-                      solid: object === "chair" && focusTile
+                      solid: object === "chair" && focusTile,
+                      solidVertical: object === "storage" && focusTile
                     });
         }
         console.log(data);
@@ -248,7 +280,8 @@ const SquareEdit = ({router}) => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className={styles.main}>
-          <div className="screenWrapper" style={{position: "relative",height: "100vh",width: "100%", margin: "auto", display: "flex", backgroundColor: "black"}}>
+      <audio id='a1' src='/song5.mp3'></audio>
+          <div className="screenWrapper" style={{position: "relative",height: "100vh",width: "100%", margin: "auto", display: "flex", backgroundColor: "black"}} onClick={(e)=>playAudio(e)}>
             <div className={styles.screen} style={{ position: "relative", display: "flex", flexDirection: "row", flexWrap: "wrap", width: "90vh", margin: "auto"}}>
               <div className="tiles" style={{position: "absolute", display: "flex",flexDirection: "row", flexWrap: "wrap", width: "100%", zIndex: "10"}}>
                 {tilesArray.map((tile)=>(
@@ -317,7 +350,7 @@ const SquareEdit = ({router}) => {
                   }}>
                     {objectBar && (objectBar.map((object,index)=>
                       <div key={index} style={{
-                        position: "relative", minWidth: "15%", paddingBottom: `${objectHeight && objectHeight || "0%"}`, 
+                        position: "relative", minWidth: "15%", paddingBottom: `${objectHeight && (objectHeight) || "0%"}`, 
                         margin: "1%", backgroundColor: "white", transition: "padding-bottom 0.5s linear"
                       }}>
                         {object === "chair" && 

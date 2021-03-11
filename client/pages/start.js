@@ -5,6 +5,7 @@ import SquareList from "./squares/squareList";
 
 // Sprites Component Import
 import MainChar, {MainCharUp, MainCharRight, MainCharLeft} from "./sprites/characters/mainChar/mainChar";
+import GirlChar, {GirlCharUp, GirlCharLeft, GirlCharRight} from "./sprites/characters/girlChar/girlChar";
 
 // Material UI Component Import
 import {Button} from '@material-ui/core';
@@ -57,10 +58,28 @@ const Start = () => {
 
   //
   
-
+  const [character, setCharacter] = useState("default");
   const [direction, setDirection] = useState("downDirection");
   
-  
+  const switchChar = () =>{
+    if(character){
+      if(character === "default"){
+        setCharacter("girlChar");
+      }else if(character === "girlChar"){
+        setCharacter("default");
+      }
+    }
+  }
+
+  const confirmChar = () =>{
+    if(character){
+      const updateData = {
+        character: character
+      };
+      localStorage.setItem("character", JSON.stringify(updateData));
+    }
+  }
+
   const handleAuthentication = async (e) =>{
     //e.preventDefault();
     // GOOGLE AUTHENTIFICATION WITH POPUP
@@ -203,6 +222,7 @@ const Start = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("edit");
     localStorage.removeItem("visit");
+    localStorage.removeItem("character");
   }
 
   const keyControl = (event) =>{
@@ -244,8 +264,14 @@ const Start = () => {
   // useEffect to get localStorage from user in case of refresh
   useEffect(()=>{
     const local = JSON.parse(localStorage.getItem("user"));
+    const characterLocal = JSON.parse(localStorage.getItem("character"));
     console.log(local);
     setUserStorage(local);
+    if(!characterLocal){
+      setCharacter("default");
+    }else{
+      setCharacter(characterLocal.character);
+    }
   }, []);
 
 
@@ -303,31 +329,31 @@ const Start = () => {
                         <div className="UserLog" style={{position: "relative", textAlign: "center", width: "100%", height: "50%", display: "flex", flexDirection: "column", backgroundColor: "RGBA(0,196,255,0.50)"}}>
                           <h1 style={{margin: "1% 0%", color: "white"}}>Log Square</h1>
                           <p>{userStorage  && (`Welcome ${userStorage.username}`)}</p>
-                          <p>{userStorage  && (`Square_id: ${userStorage.uid}`)}</p>
+                          <p style={{textTransform: "none"}}>{userStorage  && (`Square_id: ${userStorage.uid}`)}</p>
                           <div className="avatarPreview" style={{position: "relative", width: "10%", margin: "auto", marginTop: "1%",marginBottom: "1%", paddingBottom: "10%", backgroundColor: "white", boxShadow: "1px 0px 3px 1px rgba(0,0,0,0.50)"}}>
-                              <div style={{position: "absolute", height: "100%", width: "100%", margin: "0", display: "flex"}}>
+                              <div style={{position: "absolute", height: "100%", width: "100%", margin: "0", display: "flex"}} onClick={()=>switchChar()}>
                                   {direction === "upDirection" && 
                                         (
-                                        <MainCharUp/>
+                                        character === "default" && (<MainCharUp/>) || character === "girlChar" && (<GirlCharUp/>)
                                         ) 
                                         || 
                                       direction === "downDirection" && 
                                         (
-                                          <MainChar/>
+                                        character === "default" && (<MainChar/>) || character === "girlChar" && (<GirlChar/>)
                                         )
                                         || 
                                       direction === "leftDirection" && 
                                       (
-                                        <MainCharLeft/>
+                                        character === "default" && (<MainCharLeft/>) || character === "girlChar" && (<GirlCharLeft/>)
                                       ) 
                                       || 
                                       direction === "rightDirection" && 
                                       (
-                                        <MainCharRight/>
+                                        character === "default" && (<MainCharRight/>) || character === "girlChar" && (<GirlCharRight/>)
                                       ) 
                                       || 
                                       (
-                                        <MainChar/>
+                                        character === "default" && (<MainChar/>) || character === "girlChar" && (<GirlChar/>)
                                       )
                                     }
                               </div>
@@ -340,7 +366,7 @@ const Start = () => {
                                                                         alignItems: "center", 
                                                                         justifyContent: "space-evenly",
                                                                         margin: "1% 0% 0% 0%"}}>
-                            <Button variant="contained" style={{backgroundColor: "orange"}}>Confirm Avatar</Button>
+                            <Button variant="contained" style={{backgroundColor: "orange"}} onClick={()=>confirmChar()} >Confirm Avatar</Button>
                           </div>
                           <div className="userDeleteButton" style={{
                                                                     position: "relative",
@@ -367,7 +393,7 @@ const Start = () => {
                                 <Button onClick={()=>DeleteUser()} color="primary" autoFocus>
                                   Agree
                                 </Button>
-                                <Button onClick={handleCloseDialog} color="primary">
+                                <Button onClick={handleCloseDialog} color="secondary">
                                   Disagree
                                 </Button>
                               </DialogActions>

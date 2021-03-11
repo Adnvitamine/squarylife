@@ -1,0 +1,12 @@
+To build production:
+npm run build
+
+To export production for hosting:
+npx next export (it will give /out folder)
+
+to serve the folder locally:
+if serve dependency not installed:
+npm i -g serve
+
+then:
+serve -s out -p 8000

@@ -7,7 +7,9 @@ import { useRouter } from 'next/router';
 import { withRouter } from "next/router";
 
 import MainChar, {MainCharUp, MainCharRight, MainCharLeft} from "../sprites/characters/mainChar/mainChar";
+import GirlChar, {GirlCharUp, GirlCharRight, GirlCharLeft} from "../sprites/characters/girlChar/girlChar";
 import MainCharAnimation from "../sprites/characters/mainChar/mainCharAnimation";
+import GirlCharAnimation from "../sprites/characters/girlChar/girCharAnimation";
 import ChairRight from "../sprites/furnitures/chair";
 import StorageDown from "../sprites/furnitures/storage";
 import Window, {WindowNcurtainRed} from "../sprites/furnitures/window";
@@ -17,6 +19,7 @@ import "firebase/firestore";
 import initFirebase from "../api/firebase";
 
 import { useDocumentData } from 'react-firebase-hooks/firestore';
+import { useCollectionData } from 'react-firebase-hooks/firestore';
 
 
 initFirebase();
@@ -41,11 +44,13 @@ const SquareVisit = ({router}) => {
   const [audio, setAudio] = useState(false);
   const [play, setPlay] = useState();  
   const maxTiles = 49;
+  const [character, setCharacter] = useState("default");
   const [tilesArray, setTilesArray] = useState([]);
   const [userId, setUserId] = useState();
   const [squareId, setSquareId] = useState();
   const [backgroundTiles] = useState("rgba(0,0,0,0)");
   const [userStorage, setUserStorage] = useState();
+  const [username, setUsername] = useState("unknown");
   const [visitStorage, setVisitStorage] = useState();
   const [hoverTile, setHoverTile] = useState();
   const [objectPlacement, setObjectPlacement] = useState([]);
@@ -56,16 +61,26 @@ const SquareVisit = ({router}) => {
   const [initial, setInitial] = useState(46);
   const [direction, setDirection] = useState("downDirection");
   const [positionTop, setPositionTop] = useState(-0);
-  const [moveTop, setMoveTop] = useState(-0);
   const [positionLeft, setPositionLeft] = useState(-0);
-  const [moveLeft, setMoveLeft] = useState(-0);
-
-  const [allowInput, setAllowInput] = useState(true);
   const [mainAnimate, setMainAnimate] = useState(false);
+  const [moveTop, setMoveTop] = useState(-0);
+  const [moveLeft, setMoveLeft] = useState(-0);
   const [foot, setFoot] = useState("left");
 
+  const [allowInput, setAllowInput] = useState(true);
+
+  const [chatBox, setChatBox] = useState(false);
+  const [message, setMessage] = useState();
+
+  //hooks for all visitors in owner's SQUARE COLLECTION in firestore
+  const [visitorListQuery, setVisitorListQuery] = useState();
+  const [visitorListCollection] = useCollectionData(visitorListQuery, {idField: 'id'});
+
+  //hooks for owner in owner's SQUARE COLLECTION in firestore
+  const [ownerListQuery, setOwnerListQuery] = useState();
+  const [ownerListCollection] = useCollectionData(ownerListQuery, {idField: 'id'});
+
   const playAudio = (e) =>{
-    
     if(e.target !== e.currentTarget){
         return;
       }else{
@@ -93,28 +108,47 @@ const SquareVisit = ({router}) => {
       }
   }
 
-  const handleTiles = (tile) =>{
+  /*
+  const handleTiles = async (e, tile) =>{
+    console.log(tile);
       if(tile === 46){
         if(play){
           clearInterval(play);
           const audio = document.getElementById('a1');
           audio.pause();
         }
+        if(owner){
+          await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(userStorage.uid).delete();
+        }
+        if(visitor){
+          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(userStorage.uid).delete();
+        }
         history.push('../');
       }
   }
+  */
 
   useEffect(()=>{
     const userLocal = JSON.parse(localStorage.getItem("user"));
     const visitLocal = JSON.parse(localStorage.getItem("visit"));
+    const characterLocal = JSON.parse(localStorage.getItem("character"));
     if(!visitLocal){
-      console.log("No Access")
-      history.push('../')
+      console.log("No Access");
+      history.push('../');
     }
     else
     {
       setUserStorage(userLocal);
+      const fullName = userLocal.username;
+      const split = fullName.split(' ');
+      const username = split[0];
+      setUsername(username);
       setVisitStorage(visitLocal);
+      if(!characterLocal){
+        setCharacter("default")
+      }else{
+        setCharacter(characterLocal.character);
+      }
     }
   }, []);
 
@@ -136,9 +170,45 @@ const SquareVisit = ({router}) => {
           if(userSquareData.owner === userId){
               console.log("Square owner!")
               setOwner(userId);
+              const fullName = userStorage.username;
+              const split = fullName.split(' ');
+              const firstName = split[0];
+              firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(userStorage.uid).set({
+                initial: 46,
+                direction: "downDirection",
+                positionTop: 0,
+                positionLeft: 0,
+                moveTop: 0,
+                moveLeft: 0,
+                foot: "left",
+                mainAnimate: false,
+                message: "",
+                character: character,
+                username: firstName
+                });
+                const visitorListRef = firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('visitor');
+                setVisitorListQuery(visitorListRef);
           }else{
-              console.log("Visitor");
+              console.log("A Visitor appeared!");
               setVisitor(userId);
+              const fullName = userStorage.username;
+              const split = fullName.split(' ');
+              const firstName = split[0];
+              firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(userStorage.uid).set({
+                initial: 46,
+                direction: "downDirection",
+                positionTop: 0,
+                positionLeft: 0,
+                moveTop: 0,
+                moveLeft: 0,
+                foot: "left",
+                mainAnimate: false,
+                message: "",
+                character: character,
+                username: firstName
+                });
+                const ownerListRef = firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('owner');
+                setOwnerListQuery(ownerListRef);
           }
       }
   }, [userId, userSquareData])
@@ -161,8 +231,8 @@ const SquareVisit = ({router}) => {
 
   
 
-  const keyControl = (event) =>{
-    event.preventDefault();
+  const keyControl = async (event) =>{
+    //event.preventDefault();
     console.log(event);
     if(!event.repeat){
       const areaMapping = [
@@ -178,11 +248,44 @@ const SquareVisit = ({router}) => {
           objectMapping.push(userSquareData.data[i].solid);
         }
       }
+      const objectVerticalMapping = [];
+      if(userSquareData.data){
+        for(let i = 0; i < userSquareData.data.length; i++){
+          objectVerticalMapping.push(userSquareData.data[i].solidVertical);
+        }
+      }
       switch(event.key){
+        case "Enter":
+            if(chatBox){
+              if(owner){
+                await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                  message: message
+                  });
+              }else if(visitor){
+                await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                  message: message
+                  });
+              }
+              setChatBox(false);
+            }else{
+              setChatBox(true);
+              document.getElementById("Message").focus();
+            }
+            break;
         case "ArrowUp":
+          setMessage();
+          if(owner){
+            await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+              message: ""
+              });
+          }else if(visitor){
+            await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+              message: ""
+              });
+          }
             if(direction === "upDirection"){
               if(areaMapping.includes(initial - 7)){
-                if(!objectMapping.includes(initial - 7)){
+                if(!objectMapping.includes(initial - 7) && !objectVerticalMapping.includes(initial) ){
                   setAllowInput(false);
                   if(foot === "left"){
                     setFoot("right");
@@ -192,9 +295,37 @@ const SquareVisit = ({router}) => {
                     setPositionLeft(moveLeft);
                     setPositionTop(moveTop);
                     setMoveTop(moveTop - 100);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "right",
+                        initial: initial - 7,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveTop: moveTop - 100
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "right",
+                        initial: initial - 7,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveTop: moveTop - 100
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }else if(foot === "right"){
                     setFoot("left");
@@ -204,9 +335,37 @@ const SquareVisit = ({router}) => {
                     setPositionLeft(moveLeft);
                     setPositionTop(moveTop);
                     setMoveTop(moveTop - 100);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "left",
+                        initial: initial - 7,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveTop: moveTop - 100
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "left",
+                        initial: initial - 7,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveTop: moveTop - 100
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }
                 }else{
@@ -214,16 +373,56 @@ const SquareVisit = ({router}) => {
                   if(foot === "left"){
                     setFoot("right");
                     setMainAnimate(true);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "right",
+                        mainAnimate: true,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "right",
+                        mainAnimate: true,
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }else if(foot === "right"){
                     setFoot("left");
                     setMainAnimate(true);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "left",
+                        mainAnimate: true,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "left",
+                        mainAnimate: true,
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }
                 }
@@ -232,63 +431,86 @@ const SquareVisit = ({router}) => {
                 if(foot === "left"){
                   setFoot("right");
                   setMainAnimate(true);
-                  setTimeout(()=>{
+                  if(owner){
+                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      foot: "right",
+                      mainAnimate: true,
+                      });
+                  }else if(visitor){
+                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                      foot: "right",
+                      mainAnimate: true,
+                      });
+                  }
+                  setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                         mainAnimate: false,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        mainAnimate: false,
+                        });
+                    }
                   }, 600);
                 }else if(foot === "right"){
                   setFoot("left");
                   setMainAnimate(true);
-                  setTimeout(()=>{
+                  if(owner){
+                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      foot: "left",
+                      mainAnimate: true,
+                      });
+                  }else if(visitor){
+                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                      foot: "left",
+                      mainAnimate: true,
+                      });
+                  }
+                  setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                         mainAnimate: false,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        mainAnimate: false,
+                        });
+                    }
                   }, 600);
                 }
               };
             }else{
               setDirection("upDirection");
+              if(owner){
+                await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                  direction: "upDirection"
+                  });
+              }else if(visitor){
+                await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                  direction: "upDirection"
+                  });
+              }
             }
             break;
         case "ArrowDown":
+          setMessage();
+          if(owner){
+            await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+              message: ""
+              });
+          }else if(visitor){
+            await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+              message: ""
+              });
+          }
             if(direction === "downDirection"){
-              if(initial === 46){
-                if(play){
-                  clearInterval(play);
-                  const audio = document.getElementById('a1');
-                  audio.pause();
-                }
-                router.push('../');
-              }
-              if(initial + 7 === 46){
-                setAllowInput(false);
-                  if(foot==="left"){
-                    setFoot("right");
-                    setInitial(initial + 7);
-                    console.log(initial + 7);
-                    setMainAnimate(true);
-                    setPositionLeft(moveLeft);
-                    setPositionTop(moveTop);
-                    setMoveTop(moveTop + 100);
-                    setTimeout(()=>{
-                      setMainAnimate(false);
-                      setAllowInput(true);
-                    }, 600);
-                  }else if(foot==="right"){
-                    setFoot("left");
-                    setInitial(initial + 7);
-                    console.log(initial + 7);
-                    setMainAnimate(true);
-                    setPositionLeft(moveLeft);
-                    setPositionTop(moveTop);
-                    setMoveTop(moveTop + 100);
-                    setTimeout(()=>{
-                      setMainAnimate(false);
-                      setAllowInput(true);
-                    }, 600);
-                  }
-              }
               if(areaMapping.includes(initial + 7)){
-                if(!objectMapping.includes(initial + 7)){
+                if(!objectMapping.includes(initial + 7) && !objectVerticalMapping.includes(initial + 7)){
                   setAllowInput(false);
                   if(foot==="left"){
                     setFoot("right");
@@ -298,9 +520,37 @@ const SquareVisit = ({router}) => {
                     setPositionLeft(moveLeft);
                     setPositionTop(moveTop);
                     setMoveTop(moveTop + 100);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "right",
+                        initial: initial + 7,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveTop: moveTop + 100
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "right",
+                        initial: initial + 7,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveTop: moveTop + 100
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }else if(foot==="right"){
                     setFoot("left");
@@ -310,9 +560,37 @@ const SquareVisit = ({router}) => {
                     setPositionLeft(moveLeft);
                     setPositionTop(moveTop);
                     setMoveTop(moveTop + 100);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "left",
+                        initial: initial + 7,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveTop: moveTop + 100
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "left",
+                        initial: initial + 7,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveTop: moveTop + 100
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }
                 }else{
@@ -320,42 +598,157 @@ const SquareVisit = ({router}) => {
                   if(foot === "left"){
                     setFoot("right");
                     setMainAnimate(true);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "right",
+                        mainAnimate: true,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "right",
+                        mainAnimate: true,
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }else if(foot === "right"){
                     setFoot("left");
                     setMainAnimate(true);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "left",
+                        mainAnimate: true,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "left",
+                        mainAnimate: true,
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }
                 }
               }else{
-                setAllowInput(false);
+                if(initial === 46){
+                  if(play){
+                    clearInterval(play);
+                    const audio = document.getElementById('a1');
+                    audio.pause();
+                  }
+                  if(owner){
+                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(userStorage.uid).delete();
+                  }
+                  if(visitor){
+                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(userStorage.uid).delete();
+                  }
+                  router.push('../');
+                }else{
+                  setAllowInput(false);
                 if(foot === "left"){
                   setFoot("right");
                   setMainAnimate(true);
-                  setTimeout(()=>{
+                  if(owner){
+                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      foot: "right",
+                      mainAnimate: true,
+                      });
+                  }else if(visitor){
+                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                      foot: "right",
+                      mainAnimate: true,
+                      });
+                  }
+                  setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                         mainAnimate: false,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        mainAnimate: false,
+                        });
+                    }
                   }, 600);
                 }else if(foot === "right"){
                   setFoot("left");
                   setMainAnimate(true);
-                  setTimeout(()=>{
+                  if(owner){
+                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      foot: "left",
+                      mainAnimate: true,
+                      });
+                  }else if(visitor){
+                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                      foot: "left",
+                      mainAnimate: true,
+                      });
+                  }
+                  setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                         mainAnimate: false,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        mainAnimate: false,
+                        });
+                    }
                   }, 600);
                 }
+                }
+                
               };
             }else{
               setDirection("downDirection");
+              if(owner){
+                await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                  direction: "downDirection"
+                  });
+              }else if(visitor){
+                await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                  direction: "downDirection"
+                  });
+              }
             }
             break;
         case "ArrowLeft":
+          setMessage();
+          if(owner){
+            await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+              message: ""
+              });
+          }else if(visitor){
+            await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+              message: ""
+              });
+          }
             if(direction === "leftDirection"){
               if(areaMapping.includes(initial - 1)){
                 if(!objectMapping.includes(initial - 1)){
@@ -368,9 +761,37 @@ const SquareVisit = ({router}) => {
                     setPositionTop(moveTop);
                     setPositionLeft(moveLeft);
                     setMoveLeft(moveLeft - 100);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "right",
+                        initial: initial - 1,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveLeft: moveLeft - 100
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "right",
+                        initial: initial - 1,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveLeft: moveLeft - 100
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }else if(foot === "right"){
                     setFoot("left");
@@ -380,9 +801,37 @@ const SquareVisit = ({router}) => {
                     setPositionTop(moveTop);
                     setPositionLeft(moveLeft);
                     setMoveLeft(moveLeft - 100);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "left",
+                        initial: initial - 1,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveLeft: moveLeft - 100
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "left",
+                        initial: initial - 1,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveLeft: moveLeft - 100
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }
                 }else{
@@ -390,16 +839,56 @@ const SquareVisit = ({router}) => {
                   if(foot === "left"){
                     setFoot("right");
                     setMainAnimate(true);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "right",
+                        mainAnimate: true,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "right",
+                        mainAnimate: true,
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }else if(foot === "right"){
                     setFoot("left");
                     setMainAnimate(true);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "left",
+                        mainAnimate: true,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "left",
+                        mainAnimate: true,
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }
                 }
@@ -408,24 +897,83 @@ const SquareVisit = ({router}) => {
                 if(foot === "left"){
                   setFoot("right");
                   setMainAnimate(true);
-                  setTimeout(()=>{
+                  if(owner){
+                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      foot: "right",
+                      mainAnimate: true,
+                      });
+                  }else if(visitor){
+                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                      foot: "right",
+                      mainAnimate: true,
+                      });
+                  }
+                  setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                         mainAnimate: false,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        mainAnimate: false,
+                        });
+                    }
                   }, 600);
                 }else if(foot === "right"){
                   setFoot("left");
                   setMainAnimate(true);
-                  setTimeout(()=>{
+                  if(owner){
+                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      foot: "left",
+                      mainAnimate: true,
+                      });
+                  }else if(visitor){
+                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                      foot: "left",
+                      mainAnimate: true,
+                      });
+                  }
+                  setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                         mainAnimate: false,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        mainAnimate: false,
+                        });
+                    }
                   }, 600);
                 }
               };
             }else{
               setDirection("leftDirection");
+              if(owner){
+                await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                  direction: "leftDirection"
+                  });
+              }else if(visitor){
+                await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                  direction: "leftDirection"
+                  });
+              }
             }
             break;
         case "ArrowRight":
+          setMessage();
+          if(owner){
+            await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+              message: ""
+              });
+          }else if(visitor){
+            await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+              message: ""
+              });
+          }
             if(direction === "rightDirection"){
               if(areaMapping.includes(initial + 1)){
                 if(!objectMapping.includes(initial + 1)){
@@ -438,9 +986,37 @@ const SquareVisit = ({router}) => {
                     setPositionTop(moveTop);
                     setPositionLeft(moveLeft);
                     setMoveLeft(moveLeft + 100);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "right",
+                        initial: initial + 1,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveLeft: moveLeft + 100
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "right",
+                        initial: initial + 1,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveLeft: moveLeft + 100
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }else if(foot === "right"){
                     setFoot("left");
@@ -450,9 +1026,37 @@ const SquareVisit = ({router}) => {
                     setPositionTop(moveTop);
                     setPositionLeft(moveLeft);
                     setMoveLeft(moveLeft + 100);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "left",
+                        initial: initial + 1,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveLeft: moveLeft + 100
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "left",
+                        initial: initial + 1,
+                        mainAnimate: true,
+                        positionLeft: moveLeft,
+                        positionTop: moveTop,
+                        moveLeft: moveLeft + 100
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }
                 }else{
@@ -460,16 +1064,56 @@ const SquareVisit = ({router}) => {
                   if(foot === "left"){
                     setFoot("right");
                     setMainAnimate(true);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "right",
+                        mainAnimate: true,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "right",
+                        mainAnimate: true,
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }else if(foot === "right"){
                     setFoot("left");
                     setMainAnimate(true);
-                    setTimeout(()=>{
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        foot: "left",
+                        mainAnimate: true,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "left",
+                        mainAnimate: true,
+                        });
+                    }
+                    setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
+                      if(owner){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                           mainAnimate: false,
+                          });
+                      }else if(visitor){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
                     }, 600);
                   }
                 }
@@ -478,21 +1122,70 @@ const SquareVisit = ({router}) => {
                 if(foot === "left"){
                   setFoot("right");
                   setMainAnimate(true);
-                  setTimeout(()=>{
+                  if(owner){
+                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      foot: "right",
+                      mainAnimate: true,
+                      });
+                  }else if(visitor){
+                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                      foot: "right",
+                      mainAnimate: true,
+                      });
+                  }
+                  setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                         mainAnimate: false,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        mainAnimate: false,
+                        });
+                    }
                   }, 600);
                 }else if(foot === "right"){
                   setFoot("left");
                   setMainAnimate(true);
-                  setTimeout(()=>{
+                  if(owner){
+                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      foot: "left",
+                      mainAnimate: true,
+                      });
+                  }else if(visitor){
+                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                      foot: "left",
+                      mainAnimate: true,
+                      });
+                  }
+                  setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
+                    if(owner){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                         mainAnimate: false,
+                        });
+                    }else if(visitor){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        mainAnimate: false,
+                        });
+                    }
                   }, 600);
                 }
               };
             }else{
               setDirection("rightDirection");
+              if(owner){
+                await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                  direction: "rightDirection"
+                  });
+              }else if(visitor){
+                await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                  direction: "rightDirection"
+                  });
+              }
             }
             break;
         default:
@@ -507,7 +1200,7 @@ const SquareVisit = ({router}) => {
       window.addEventListener('keydown', keyControl);
     return () => window.removeEventListener('keydown', keyControl);
     }
-}, [keyControl]);
+}, [allowInput, keyControl]);
   
 
   return (
@@ -525,7 +1218,7 @@ const SquareVisit = ({router}) => {
                   <div className="soloTile" key={tile} style={{position: "relative" ,width: "14.28%", paddingBottom: "14.28%", 
                                                                       backgroundColor: `${tile === hoverTile && "rgba(49,48,51,0.39)"|| backgroundTiles}`,
                                                                       transition: "background-color 0.5s linear"}} 
-                                                                      onMouseOver={()=>handleHoverTile(tile)} onClick={()=>handleTiles(tile)}>
+                                                                      onMouseOver={()=>handleHoverTile(tile)}>
                     {objectPlacement && (objectPlacement.map((object, index)=> 
                      <div key={index} style={{position: "absolute", width: "100%", height: "100%",margin: "auto", zIndex: `${tile > 15 && tile < 21 && "15" || tile > 22 && tile < 28 && "25" || tile > 29 && tile < 35 && "35" || tile > 36 && tile < 42 && "46"}` }}>
                       {tile === object.position && 
@@ -571,12 +1264,72 @@ const SquareVisit = ({router}) => {
                      </div>
                     ))}
                     {tile === 46 && 
-                      (<MainStyle  positionTop={positionTop} moveTop={moveTop} positionLeft={positionLeft} moveLeft={moveLeft} style={{zIndex: `${initial > 15 && initial < 21 && "16" || initial > 22 && initial < 28 && "26" || initial > 29 && initial < 35 && "36" || initial > 36 && initial < 42 && "46"}`}}>
+                      (!visitor && 
+                        (
+                          visitorListCollection && (
+                            visitorListCollection.map((visitor, index)=>
+                              <MainStyle key={visitor.id} positionTop={visitor.positionTop} moveTop={visitor.moveTop} positionLeft={visitor.positionLeft} moveLeft={visitor.moveLeft} style={{zIndex: `${visitor.initial > 15 && visitor.initial < 21 && "16" || visitor.initial > 22 && visitor.initial < 28 && "26" || visitor.initial > 29 && visitor.initial < 35 && "36" || visitor.initial > 36 && visitor.initial < 42 && "46" || visitor.initial === 46 && "56"}`}}>
+                                {visitor.direction === "upDirection" && 
+                                  (
+                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                        {visitor.character === "default" && (visitor.mainAnimate === true && (<MainCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<MainCharUp/>)) || visitor.character === "girlChar" && (visitor.mainAnimate === true && (<GirlCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<GirlCharUp/>))}
+                                      </div>
+                                    </div>
+                                  )
+                                  || visitor.direction === "downDirection" &&
+                                  (
+                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                      {visitor.character === "default" && (visitor.mainAnimate === true && (<MainCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<MainChar/>)) || visitor.character === "girlChar" && (visitor.mainAnimate === true && (<GirlCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<GirlChar/>))}
+                                      </div>
+                                    </div>
+                                  )
+                                  || visitor.direction === "leftDirection" &&
+                                  (
+                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                      {visitor.character === "default" && (visitor.mainAnimate === true && (<MainCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<MainCharLeft/>)) || visitor.character === "girlChar" && (visitor.mainAnimate === true && (<GirlCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<GirlCharLeft/>))}
+                                      </div>
+                                    </div>
+                                  )
+                                  || visitor.direction === "rightDirection" &&
+                                  (
+                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                      {visitor.character === "default" && (visitor.mainAnimate === true && (<MainCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<MainCharRight/>)) || visitor.character === "girlChar" && (visitor.mainAnimate === true && (<GirlCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<GirlCharRight/>))}
+                                      </div>
+                                    </div>
+                                  )
+                                  }
+                                  {visitor.message && 
+                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-80%", left: "80%", margin: "auto", zIndex: "50"}}>
+                                          <div style={{position: "relative", width: "auto", maxWidth: "100%", height: "auto", backgroundColor: "white", border: "2px solid black", borderRadius: "5px", padding: "2% 5%"}}>
+                                            <p style={{wordWrap: "break-word", textTransform: "none"}}>{visitor.message}</p>
+                                          </div>
+                                      </div>}
+                                  {visitor.username && 
+                                  <div style={{position: "absolute", width: "100%", margin: "auto", top: "-75%", zIndex: "50"}}>
+                                      <div style={{position: "relative", width: "100%", height: "auto", display: "flex", justifyContent: "center"}}>
+                                        <div style={{position: "absolute", width: "auto", margin: "auto", backgroundColor: "RGBA(29,30,31,0.49)", padding: "2% 5%"}}>
+                                          <p style={{wordWrap: "break-word", color: "RGBA(255,255,255,1)"}}>{visitor.username}</p>
+                                        </div>
+                                      </div>
+                                  </div>}
+                              </MainStyle>
+                              )
+                          )
+                        )
+                      )
+                      }
+                    {tile === 46 && 
+                      (owner && (
+                        <MainStyle  positionTop={positionTop} moveTop={moveTop} positionLeft={positionLeft} moveLeft={moveLeft} style={{zIndex: `${initial > 15 && initial < 21 && "16" || initial > 22 && initial < 28 && "26" || initial > 29 && initial < 35 && "36" || initial > 36 && initial < 42 && "46" || initial === 46 && "56"}`}} onClick={()=>console.log("Open Inventory")}>
                       {direction === "upDirection" && 
                         (
                           <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
                             <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
-                              {mainAnimate === true && <MainCharAnimation foot={foot} direction={direction}/> || <MainCharUp/>}
+                              {character === "default" && (mainAnimate === true && (<MainCharAnimation foot={foot} direction={direction}/>) || (<MainCharUp/>)) || character === "girlChar" && (mainAnimate === true && (<GirlCharAnimation foot={foot} direction={direction}/>) || (<GirlCharUp/>))}
                             </div>
                           </div>
                         ) 
@@ -585,7 +1338,7 @@ const SquareVisit = ({router}) => {
                         (
                           <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
                             <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
-                            {mainAnimate === true && <MainCharAnimation foot={foot} direction={direction}/> || <MainChar/>}
+                            {character === "default" && (mainAnimate === true && (<MainCharAnimation foot={foot} direction={direction}/>) || (<MainChar/>)) || character === "girlChar" && (mainAnimate === true && (<GirlCharAnimation foot={foot} direction={direction}/>) || (<GirlChar/>))}
                             </div>
                           </div>
                         )
@@ -594,7 +1347,7 @@ const SquareVisit = ({router}) => {
                       (
                         <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
                           <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%" ,margin: "auto"}}>
-                          {mainAnimate === true && <MainCharAnimation foot={foot} direction={direction}/> || <MainCharLeft/>}
+                          {character === "default" && (mainAnimate === true && (<MainCharAnimation foot={foot} direction={direction}/>) || (<MainCharLeft/>)) || character === "girlChar" && (mainAnimate === true && (<GirlCharAnimation foot={foot} direction={direction}/>) || (<GirlCharLeft/>))}
                           </div>
                         </div>
                       ) 
@@ -603,7 +1356,7 @@ const SquareVisit = ({router}) => {
                       (
                         <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
                             <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
-                            {mainAnimate === true && <MainCharAnimation foot={foot} direction={direction}/> || <MainCharRight/>}
+                            {character === "default" && (mainAnimate === true && (<MainCharAnimation foot={foot} direction={direction}/>) || (<MainCharRight/>)) || character === "girlChar" && (mainAnimate === true && (<GirlCharAnimation foot={foot} direction={direction}/>) || (<GirlCharRight/>))}
                             </div>
                           </div>
                       ) 
@@ -611,15 +1364,169 @@ const SquareVisit = ({router}) => {
                       (
                         <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
                             <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
-                              <MainChar/>
+                              {character === "default" && (<MainChar/>) || character === "girlChar" && (<GirlChar/>)}
                             </div>
                           </div>
                       )}
-                      </MainStyle>)
+                      {
+                        message && 
+                          <div style={{position: "absolute", width: "100%", height: "100%", top: "-80%", left: "80%", margin: "auto", zIndex: "50"}}>
+                              <div style={{position: "relative", width: "auto", maxWidth: "100%", height: "auto", backgroundColor: "white", border: "2px solid black", borderRadius: "5px", padding: "2% 5%"}}>
+                                <p style={{wordWrap: "break-word", textTransform: "none"}}>{message}</p>
+                              </div>
+                          </div>
+                      }
+                      {
+                        username && 
+                          <div style={{position: "absolute", width: "100%", margin: "auto", top: "-75%", zIndex: "50"}}>
+                            <div style={{position: "relative", width: "100%", height: "auto", display: "flex", justifyContent: "center"}}>
+                              <div style={{position: "absolute", width: "auto", margin: "auto", backgroundColor: "RGBA(29,30,31,0.49)", padding: "2% 5%"}}>
+                                <p style={{wordWrap: "break-word", color: "RGBA(255,225,0,1)"}}>{username}</p>
+                              </div>
+                            </div>
+                          </div>
+                      }
+                      </MainStyle>
+                      ))
+                      }
+                    {tile === 46 && 
+                      (!owner && 
+                        (
+                          ownerListCollection && (
+                            ownerListCollection.map((owner, index)=>
+                              <MainStyle key={owner.id} positionTop={owner.positionTop} moveTop={owner.moveTop} positionLeft={owner.positionLeft} moveLeft={owner.moveLeft} style={{zIndex: `${owner.initial > 15 && owner.initial < 21 && "16" || owner.initial > 22 && owner.initial < 28 && "26" || owner.initial > 29 && owner.initial < 35 && "36" || owner.initial > 36 && owner.initial < 42 && "46" || owner.initial === 46 && "56"}`}}>
+                                {owner.direction === "upDirection" && 
+                                  (
+                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                      {owner.character === "default" && (owner.mainAnimate === true && (<MainCharAnimation foot={owner.foot} direction={owner.direction}/>) || (<MainCharUp/>)) || owner.character === "girlChar" && (owner.mainAnimate === true && (<GirlCharAnimation foot={owner.foot} direction={owner.direction}/>) || (<GirlCharUp/>))}
+                                      </div>
+                                    </div>
+                                  )
+                                  || owner.direction === "downDirection" &&
+                                  (
+                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                      {owner.character === "default" && (owner.mainAnimate === true && (<MainCharAnimation foot={owner.foot} direction={owner.direction}/>) || (<MainChar/>)) || owner.character === "girlChar" && (owner.mainAnimate === true && (<GirlCharAnimation foot={owner.foot} direction={owner.direction}/>) || (<GirlChar/>))}
+                                      </div>
+                                    </div>
+                                  )
+                                  || owner.direction === "leftDirection" &&
+                                  (
+                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                      {owner.character === "default" && (owner.mainAnimate === true && (<MainCharAnimation foot={owner.foot} direction={owner.direction}/>) || (<MainCharLeft/>)) || owner.character === "girlChar" && (owner.mainAnimate === true && (<GirlCharAnimation foot={owner.foot} direction={owner.direction}/>) || (<GirlCharLeft/>))}
+                                      </div>
+                                    </div>
+                                  )
+                                  || owner.direction === "rightDirection" &&
+                                  (
+                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                      {owner.character === "default" && (owner.mainAnimate === true && (<MainCharAnimation foot={owner.foot} direction={owner.direction}/>) || (<MainCharRight/>)) || owner.character === "girlChar" && (owner.mainAnimate === true && (<GirlCharAnimation foot={owner.foot} direction={owner.direction}/>) || (<GirlCharRight/>))}
+                                      </div>
+                                    </div>
+                                  )
+                                  }
+                                  {
+                                    owner.message && 
+                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-80%", left: "80%", margin: "auto", zIndex: "50"}}>
+                                          <div style={{position: "relative", width: "auto", maxWidth: "100%", height: "auto", backgroundColor: "white", border: "2px solid black", borderRadius: "5px", padding: "2% 5%"}}>
+                                            <p style={{wordWrap: "break-word", textTransform: "none"}}>{owner.message}</p>
+                                          </div>
+                                      </div>
+                                  }
+                                  {
+                                    owner.username && 
+                                      <div style={{position: "absolute", width: "100%", margin: "auto", top: "-75%", zIndex: "50"}}>
+                                        <div style={{position: "relative", width: "100%", height: "auto", display: "flex", justifyContent: "center"}}>
+                                          <div style={{position: "absolute", width: "auto", margin: "auto", backgroundColor: "RGBA(29,30,31,0.49)", padding: "2% 5%"}}>
+                                            <p style={{wordWrap: "break-word", color: "RGBA(255,255,255,1)"}}>{owner.username}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                  }
+                              </MainStyle>
+                              )
+                          )
+                        )
+                      )
+                      }
+                    {tile === 46 && 
+                      (visitor && (
+                        <MainStyle  positionTop={positionTop} moveTop={moveTop} positionLeft={positionLeft} moveLeft={moveLeft} style={{zIndex: `${initial > 15 && initial < 21 && "16" || initial > 22 && initial < 28 && "26" || initial > 29 && initial < 35 && "36" || initial > 36 && initial < 42 && "46" || initial === 46 && "56"}`}}>
+                      {direction === "upDirection" && 
+                        (
+                          <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                            {character === "default" && (mainAnimate === true && (<MainCharAnimation foot={foot} direction={direction}/>) || (<MainCharUp/>)) || character === "girlChar" && (mainAnimate === true && (<GirlCharAnimation foot={foot} direction={direction}/>) || (<GirlCharUp/>))}
+                            </div>
+                          </div>
+                        ) 
+                        || 
+                      direction === "downDirection" && 
+                        (
+                          <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                            {character === "default" && (mainAnimate === true && (<MainCharAnimation foot={foot} direction={direction}/>) || (<MainChar/>)) || character === "girlChar" && (mainAnimate === true && (<GirlCharAnimation foot={foot} direction={direction}/>) || (<GirlChar/>))}
+                            </div>
+                          </div>
+                        )
+                        || 
+                      direction === "leftDirection" && 
+                      (
+                        <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                          <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%" ,margin: "auto"}}>
+                          {character === "default" && (mainAnimate === true && (<MainCharAnimation foot={foot} direction={direction}/>) || (<MainCharLeft/>)) || character === "girlChar" && (mainAnimate === true && (<GirlCharAnimation foot={foot} direction={direction}/>) || (<GirlCharLeft/>))}
+                          </div>
+                        </div>
+                      ) 
+                      || 
+                      direction === "rightDirection" && 
+                      (
+                        <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                            {character === "default" && (mainAnimate === true && (<MainCharAnimation foot={foot} direction={direction}/>) || (<MainCharRight/>)) || character === "girlChar" && (mainAnimate === true && (<GirlCharAnimation foot={foot} direction={direction}/>) || (<GirlCharRight/>))}
+                            </div>
+                          </div>
+                      ) 
+                      || 
+                      (
+                        <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                            {character === "default" && (<MainChar/>) || character === "girlChar" && (<GirlChar/>)}
+                            </div>
+                          </div>
+                      )}
+                      {
+                        message && 
+                          <div style={{position: "absolute", width: "100%", height: "100%", top: "-80%", left: "80%", margin: "auto", zIndex: "50"}}>
+                              <div style={{position: "relative", width: "auto", maxWidth: "100%", height: "auto", backgroundColor: "white", border: "2px solid black", borderRadius: "5px", padding: "2% 5%"}}>
+                                <p style={{wordWrap: "break-word", textTransform: "none"}}>{message}</p>
+                              </div>
+                          </div>
+                      }
+                      {
+                        username && 
+                          <div style={{position: "absolute", width: "100%", margin: "auto", top: "-75%", zIndex: "50"}}>
+                            <div style={{position: "relative", width: "100%", height: "auto", display: "flex", justifyContent: "center"}}>
+                              <div style={{position: "absolute", width: "auto", margin: "auto", backgroundColor: "RGBA(29,30,31,0.49)", padding: "2% 5%"}}>
+                                <p style={{wordWrap: "break-word", color: "RGBA(255,225,0,1)"}}>{username}</p>
+                              </div>
+                            </div>
+                          </div>
+                      }
+                      </MainStyle>
+                      ))
                       }
                   </div>
                 ))}
               </div>
+              {chatBox && 
+                <div style={{position: "absolute", width: "100%", bottom: "0", zIndex: "40"}}>
+                  <input id="Message" type="text" style={{width: "100%"}} onChange={(e)=>setMessage(e.target.value)}></input>
+                </div>
+              }
               {/*<div className="CharacterScreen" style={{position: "absolute", display: "flex",flexDirection: "row", flexWrap: "wrap", width: "100%", zIndex: "9"}}>
                 {tilesArray.map((tile)=>(
                   <div className="soloTile" key={tile} style={{position: "relative" ,width: "14.28%", paddingBottom: "14.28%", 
