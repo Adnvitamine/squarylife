@@ -72,7 +72,7 @@ export default function Home() {
           rel="noopener noreferrer"
         >
           Powered by{' '}
-          Doan Nguyen
+          Doan Nguyen - 2020
         </a>
       </footer>
     </div>

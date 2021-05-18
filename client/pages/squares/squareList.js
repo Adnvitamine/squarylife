@@ -309,7 +309,7 @@ const SquareList = ({uid}) =>{
                     {userData && 
                       (
                         !userData.quantity && (
-                          <Button variant="contained" style={{backgroundColor: `${joinSquareMode && "yellow" || "#99f35e" }`}} onClick={()=>openSquarePanel()} >
+                          <Button variant="contained" style={{backgroundColor: `${joinSquareMode && "yellow" || "#99f35e" }`}} onClick={joinSquareMode && (()=>openSquarePanel()) || (()=>openVisitPanel())} >
                             {joinSquareMode && "My first Square" || "Visit a Square"}
                           </Button>
                         )

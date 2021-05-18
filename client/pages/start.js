@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import SquareList from "./squares/squareList";
 
 // Sprites Component Import
+import SquaryLife from "./sprites/banner/squaryLife";
 import MainChar, {MainCharUp, MainCharRight, MainCharLeft} from "./sprites/characters/mainChar/mainChar";
 import GirlChar, {GirlCharUp, GirlCharLeft, GirlCharRight} from "./sprites/characters/girlChar/girlChar";
 
@@ -287,7 +288,7 @@ const Start = () => {
     return(
         <>
         <div className="squareAppTitle" style={{width: "100%", padding: "1%", backgroundColor: "RGBA(0,196,255,0.50)"}}>
-                <h1 style={{marginBottom:"0", marginTop: "0", color: "white"}}>SquaryLife</h1>
+                <SquaryLife/>
                 <p>{usersCollection && (
                         usersCollection.length < 2 && (
                         `${usersCollection.length} user subscribed`
@@ -310,14 +311,7 @@ const Start = () => {
                                                     justifyContent: "center"
                                                   }}>
                 {userStorage && (
-                  <div className="userPanel" style={{
-                                                    position: "relative",
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    margin: "auto",
-                                                    width: "90%",
-                                                    height: "90%",
-                                                    alignItems: "center", boxShadow: "1px 0px 3px 1px rgba(0,0,0,0.50)"}}>
+                  <div className="userPanel">
                       <div className="userInfoPanel" style={{
                                                               position: "relative",
                                                               width: "100%",
@@ -327,9 +321,9 @@ const Start = () => {
                                                               flexDirection: "column"
                                                               }}>
                         <div className="UserLog" style={{position: "relative", textAlign: "center", width: "100%", height: "50%", display: "flex", flexDirection: "column", backgroundColor: "RGBA(0,196,255,0.50)"}}>
-                          <h1 style={{margin: "1% 0%", color: "white"}}>Log Square</h1>
+                          <h2 style={{margin: "1% 0%", color: "white"}}>Log Square</h2>
                           <p>{userStorage  && (`Welcome ${userStorage.username}`)}</p>
-                          <p style={{textTransform: "none"}}>{userStorage  && (`Square_id: ${userStorage.uid}`)}</p>
+                          <p>{userStorage  && (`Square_id: ${userStorage.uid}`)}</p>
                           <div className="avatarPreview" style={{position: "relative", width: "10%", margin: "auto", marginTop: "1%",marginBottom: "1%", paddingBottom: "10%", backgroundColor: "white", boxShadow: "1px 0px 3px 1px rgba(0,0,0,0.50)"}}>
                               <div style={{position: "absolute", height: "100%", width: "100%", margin: "0", display: "flex"}} onClick={()=>switchChar()}>
                                   {direction === "upDirection" && 
@@ -366,7 +360,7 @@ const Start = () => {
                                                                         alignItems: "center", 
                                                                         justifyContent: "space-evenly",
                                                                         margin: "1% 0% 0% 0%"}}>
-                            <Button variant="contained" style={{backgroundColor: "orange"}} onClick={()=>confirmChar()} >Confirm Avatar</Button>
+                            <Button variant="contained" style={{backgroundColor: "orange"}} onClick={()=>confirmChar()} ><p>Confirm Avatar</p></Button>
                           </div>
                           <div className="userDeleteButton" style={{
                                                                     position: "relative",
@@ -376,7 +370,7 @@ const Start = () => {
                                                                     alignItems: "center", 
                                                                     justifyContent: "space-evenly",
                                                                     margin: "1% 0% 0% 0%"}}>
-                            <Button variant="contained" color="secondary" onClick={()=>handleOpenDialog()}>Delete User</Button>
+                            <Button variant="contained" color="secondary" onClick={()=>handleOpenDialog()}><p>Delete User</p></Button>
                             <Dialog
                               open={openDialog}
                               onClose={handleCloseDialog}
@@ -391,10 +385,10 @@ const Start = () => {
                               </DialogContent>
                               <DialogActions>
                                 <Button onClick={()=>DeleteUser()} color="primary" autoFocus>
-                                  Agree
+                                  <p>Agree</p>
                                 </Button>
                                 <Button onClick={handleCloseDialog} color="secondary">
-                                  Disagree
+                                  <p>Disagree</p>
                                 </Button>
                               </DialogActions>
                             </Dialog>
@@ -408,9 +402,9 @@ const Start = () => {
               
               <div style={{position: "relative", textAlign: "center", height: "10%", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "RGBA(0,196,255,0.50)"}}>
                 
-                {userStorage && (<Button variant="contained" color="secondary" onClick={()=>handleLogOut()} >Logout</Button>)
+                {userStorage && (<Button variant="contained" color="secondary" onClick={()=>handleLogOut()} ><p>Logout</p></Button>)
                 ||
-                (<Button variant="contained" color="primary" onClick={(e)=>handleAuthentication(e)} >Login</Button>)}
+                (<Button variant="contained" color="primary" onClick={(e)=>handleAuthentication(e)} ><p>Login</p></Button>)}
               </div>
         </>
     )

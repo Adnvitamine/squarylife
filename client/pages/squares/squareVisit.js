@@ -70,7 +70,7 @@ const SquareVisit = ({router}) => {
   const [allowInput, setAllowInput] = useState(true);
 
   const [chatBox, setChatBox] = useState(false);
-  const [message, setMessage] = useState();
+  const [message, setMessage] = useState("");
 
   //hooks for all visitors in owner's SQUARE COLLECTION in firestore
   const [visitorListQuery, setVisitorListQuery] = useState();
@@ -168,8 +168,8 @@ const SquareVisit = ({router}) => {
   useEffect(()=>{
       if(userId && userSquareData){
           if(userSquareData.owner === userId){
-              console.log("Square owner!")
-              setOwner(userId);
+            console.log("You are the owner of this square!");
+            setOwner(userId);
               const fullName = userStorage.username;
               const split = fullName.split(' ');
               const firstName = split[0];
@@ -184,29 +184,33 @@ const SquareVisit = ({router}) => {
                 mainAnimate: false,
                 message: "",
                 character: character,
-                username: firstName
+                username: firstName,
+                uid: userStorage.uid
                 });
                 const visitorListRef = firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('visitor');
                 setVisitorListQuery(visitorListRef);
           }else{
-              console.log("A Visitor appeared!");
-              setVisitor(userId);
-              const fullName = userStorage.username;
-              const split = fullName.split(' ');
-              const firstName = split[0];
-              firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(userStorage.uid).set({
-                initial: 46,
-                direction: "downDirection",
-                positionTop: 0,
-                positionLeft: 0,
-                moveTop: 0,
-                moveLeft: 0,
-                foot: "left",
-                mainAnimate: false,
-                message: "",
-                character: character,
-                username: firstName
-                });
+            console.log("Welcome dear visitor!");
+            setVisitor(userId);
+            const fullName = userStorage.username;
+            const split = fullName.split(' ');
+            const firstName = split[0];
+            firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(userStorage.uid).set({
+              initial: 46,
+              direction: "downDirection",
+              positionTop: 0,
+              positionLeft: 0,
+              moveTop: 0,
+              moveLeft: 0,
+              foot: "left",
+              mainAnimate: false,
+              message: "",
+              character: character,
+              username: firstName,
+              uid: userStorage.uid
+              });
+                const visitorListRef = firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor');
+                setVisitorListQuery(visitorListRef);
                 const ownerListRef = firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('owner');
                 setOwnerListQuery(ownerListRef);
           }
@@ -229,7 +233,62 @@ const SquareVisit = ({router}) => {
     setTilesArray(array);
   }, [maxTiles]);
 
-  
+  useEffect(()=>{
+    if(visitor){
+      if(visitorListCollection){
+        if(visitorListCollection.length > 1){
+          firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(userStorage.uid).update({
+            initial: initial,
+            direction: direction,
+            positionTop: positionTop,
+            positionLeft: positionLeft,
+            moveTop: moveTop,
+            moveLeft: moveLeft,
+            foot: foot,
+            mainAnimate: mainAnimate,
+            message: message
+            });
+        }
+      }
+    }
+    if(owner){
+      if(visitorListCollection){
+        if(visitorListCollection.length > 0){
+          firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(userStorage.uid).update({
+            initial: initial,
+            direction: direction,
+            positionTop: positionTop,
+            positionLeft: positionLeft,
+            moveTop: moveTop,
+            moveLeft: moveLeft,
+            foot: foot,
+            mainAnimate: mainAnimate,
+            message: message
+            });
+        }
+      }
+    }
+  }, [visitorListCollection]);
+
+  useEffect(()=>{
+    if(visitor){
+      if(ownerListCollection){
+        if(ownerListCollection.length > 0){
+          firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(userStorage.uid).update({
+            initial: initial,
+            direction: direction,
+            positionTop: positionTop,
+            positionLeft: positionLeft,
+            moveTop: moveTop,
+            moveLeft: moveLeft,
+            foot: foot,
+            mainAnimate: mainAnimate,
+            message: message
+            });
+        }
+      }
+    }
+  }, [ownerListCollection]);
 
   const keyControl = async (event) =>{
     //event.preventDefault();
@@ -254,17 +313,43 @@ const SquareVisit = ({router}) => {
           objectVerticalMapping.push(userSquareData.data[i].solidVertical);
         }
       }
+      /*
+      if(visitorListCollection){
+        console.log(visitorListCollection.length);
+        if(visitorListCollection.length > 0){
+          console.log("There's a visitor, ready to store owner information in firestore")
+        }else{
+          console.log("No one in the room, no need to store data!");
+        }
+      }
+      */
       switch(event.key){
         case "Enter":
             if(chatBox){
               if(owner){
-                await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-                  message: message
-                  });
+                if(visitorListCollection){
+                  console.log(visitorListCollection.length);
+                  if(visitorListCollection.length > 0){
+                    console.log("There's a new visitor, ready to share owner message in firestore");
+                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      message: message
+                      });
+                  }else{
+                    console.log("No one in the room, you are talking alone...");
+                  }
+                }
               }else if(visitor){
-                await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                  message: message
-                  });
+                if(visitorListCollection && ownerListCollection){
+                  //console.log(visitorListCollection.length);
+                  if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                    console.log("There's someone in the romm, ready to share visitor message in firestore");
+                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                      message: message
+                      });
+                  }else{
+                    console.log("No one in the room, no need to store data!");
+                  }
+                }
               }
               setChatBox(false);
             }else{
@@ -273,15 +358,20 @@ const SquareVisit = ({router}) => {
             }
             break;
         case "ArrowUp":
-          setMessage();
+          setMessage("");
           if(owner){
-            await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-              message: ""
-              });
+            if(visitorListCollection.length > 0){
+              await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                message: ""
+                });
+            }
           }else if(visitor){
-            await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-              message: ""
-              });
+            if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+              await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                message: ""
+                });
+            }
+            
           }
             if(direction === "upDirection"){
               if(areaMapping.includes(initial - 7)){
@@ -296,35 +386,47 @@ const SquareVisit = ({router}) => {
                     setPositionTop(moveTop);
                     setMoveTop(moveTop - 100);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "right",
                         initial: initial - 7,
                         mainAnimate: true,
                         positionLeft: moveLeft,
                         positionTop: moveTop,
-                        moveTop: moveTop - 100
+                        moveTop: moveTop - 100,
+                        direction: direction
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "right",
-                        initial: initial - 7,
-                        mainAnimate: true,
-                        positionLeft: moveLeft,
-                        positionTop: moveTop,
-                        moveTop: moveTop - 100
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "right",
+                          initial: initial - 7,
+                          mainAnimate: true,
+                          positionLeft: moveLeft,
+                          positionTop: moveTop,
+                          moveTop: moveTop - 100,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        if(visitorListCollection.length > 0){
+                          await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                            mainAnimate: false,
                           });
+                        }
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }else if(foot === "right"){
@@ -336,23 +438,30 @@ const SquareVisit = ({router}) => {
                     setPositionTop(moveTop);
                     setMoveTop(moveTop - 100);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "left",
                         initial: initial - 7,
                         mainAnimate: true,
                         positionLeft: moveLeft,
                         positionTop: moveTop,
-                        moveTop: moveTop - 100
+                        moveTop: moveTop - 100,
+                        direction: direction
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "left",
-                        initial: initial - 7,
-                        mainAnimate: true,
-                        positionLeft: moveLeft,
-                        positionTop: moveTop,
-                        moveTop: moveTop - 100
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "left",
+                          initial: initial - 7,
+                          mainAnimate: true,
+                          positionLeft: moveLeft,
+                          positionTop: moveTop,
+                          moveTop: moveTop - 100,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
@@ -362,9 +471,12 @@ const SquareVisit = ({router}) => {
                            mainAnimate: false,
                           });
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }
@@ -374,54 +486,78 @@ const SquareVisit = ({router}) => {
                     setFoot("right");
                     setMainAnimate(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "right",
                         mainAnimate: true,
+                        direction: direction
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "right",
-                        mainAnimate: true,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "right",
+                          mainAnimate: true,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-                           mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 0){
+                          await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                            mainAnimate: false,
+                            });
+                        }
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }else if(foot === "right"){
                     setFoot("left");
                     setMainAnimate(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "left",
                         mainAnimate: true,
+                        direction: direction
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "left",
-                        mainAnimate: true,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "left",
+                          mainAnimate: true,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-                           mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 0){
+                          await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                            mainAnimate: false,
+                            });
+                        }
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }
@@ -432,81 +568,103 @@ const SquareVisit = ({router}) => {
                   setFoot("right");
                   setMainAnimate(true);
                   if(owner){
-                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                    if(visitorListCollection.length > 0){
+                       await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                       foot: "right",
                       mainAnimate: true,
-                      });
+                      direction: direction
+                      }); 
+                    }
                   }else if(visitor){
-                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                      foot: "right",
-                      mainAnimate: true,
-                      });
+                    if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "right",
+                        mainAnimate: true,
+                        direction: direction
+                        });
+                    }
+                    
                   }
                   setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                          mainAnimate: false,
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        mainAnimate: false,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
+                      
                     }
                   }, 600);
                 }else if(foot === "right"){
                   setFoot("left");
                   setMainAnimate(true);
                   if(owner){
-                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                    if(visitorListCollection.length > 0){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                       foot: "left",
                       mainAnimate: true,
+                      direction: direction
                       });
+                    }
                   }else if(visitor){
-                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                      foot: "left",
-                      mainAnimate: true,
-                      });
+                    if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "left",
+                        mainAnimate: true,
+                        direction: direction
+                        });
+                    }
+                    
                   }
                   setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                          mainAnimate: false,
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        mainAnimate: false,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
+                      
                     }
                   }, 600);
                 }
               };
             }else{
               setDirection("upDirection");
-              if(owner){
-                await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-                  direction: "upDirection"
-                  });
-              }else if(visitor){
-                await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                  direction: "upDirection"
-                  });
-              }
             }
             break;
         case "ArrowDown":
-          setMessage();
-          if(owner){
-            await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-              message: ""
-              });
-          }else if(visitor){
-            await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-              message: ""
-              });
+          setMessage("");
+          if(allowInput === true){
+            if(owner){
+              if(visitorListCollection.length > 0){
+                  await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                message: ""
+                });        
+              }
+            }else if(visitor){
+              if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                  message: ""
+                  });  
+              }
+              
+            }
           }
             if(direction === "downDirection"){
               if(areaMapping.includes(initial + 7)){
@@ -521,35 +679,47 @@ const SquareVisit = ({router}) => {
                     setPositionTop(moveTop);
                     setMoveTop(moveTop + 100);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "right",
                         initial: initial + 7,
                         mainAnimate: true,
                         positionLeft: moveLeft,
                         positionTop: moveTop,
-                        moveTop: moveTop + 100
+                        moveTop: moveTop + 100,
+                        direction: direction
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "right",
-                        initial: initial + 7,
-                        mainAnimate: true,
-                        positionLeft: moveLeft,
-                        positionTop: moveTop,
-                        moveTop: moveTop + 100
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "right",
+                          initial: initial + 7,
+                          mainAnimate: true,
+                          positionLeft: moveLeft,
+                          positionTop: moveTop,
+                          moveTop: moveTop + 100,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-                           mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 0){
+                          await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                            mainAnimate: false,
+                            });
+                        }
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }else if(foot==="right"){
@@ -561,35 +731,47 @@ const SquareVisit = ({router}) => {
                     setPositionTop(moveTop);
                     setMoveTop(moveTop + 100);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "left",
                         initial: initial + 7,
                         mainAnimate: true,
                         positionLeft: moveLeft,
                         positionTop: moveTop,
-                        moveTop: moveTop + 100
+                        moveTop: moveTop + 100,
+                        direction: direction
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "left",
-                        initial: initial + 7,
-                        mainAnimate: true,
-                        positionLeft: moveLeft,
-                        positionTop: moveTop,
-                        moveTop: moveTop + 100
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "left",
+                          initial: initial + 7,
+                          mainAnimate: true,
+                          positionLeft: moveLeft,
+                          positionTop: moveTop,
+                          moveTop: moveTop + 100,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-                           mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 0){
+                          await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                            mainAnimate: false,
+                            });
+                        }
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }
@@ -599,60 +781,85 @@ const SquareVisit = ({router}) => {
                     setFoot("right");
                     setMainAnimate(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "right",
                         mainAnimate: true,
+                        direction: direction
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "right",
-                        mainAnimate: true,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "right",
+                          mainAnimate: true,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-                           mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 0){
+                          await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                            mainAnimate: false,
+                            });
+                        }
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }else if(foot === "right"){
                     setFoot("left");
                     setMainAnimate(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "left",
                         mainAnimate: true,
+                        direction: direction
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "left",
-                        mainAnimate: true,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "left",
+                          mainAnimate: true,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-                           mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 0){
+                          await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                            mainAnimate: false,
+                            });
+                        }
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }
                 }
               }else{
                 if(initial === 46){
+                  setAllowInput(false);
                   if(play){
                     clearInterval(play);
                     const audio = document.getElementById('a1');
@@ -671,54 +878,78 @@ const SquareVisit = ({router}) => {
                   setFoot("right");
                   setMainAnimate(true);
                   if(owner){
-                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                    if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                       foot: "right",
                       mainAnimate: true,
+                      direction: direction
                       });
+                    }
                   }else if(visitor){
-                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                      foot: "right",
-                      mainAnimate: true,
-                      });
+                    if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "right",
+                        mainAnimate: true,
+                        direction: direction
+                        });
+                    }
+                    
                   }
                   setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                          mainAnimate: false,
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        mainAnimate: false,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
+                      
                     }
                   }, 600);
                 }else if(foot === "right"){
                   setFoot("left");
                   setMainAnimate(true);
                   if(owner){
-                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                    if(visitorListCollection.length > 0){
+                       await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                       foot: "left",
                       mainAnimate: true,
-                      });
+                      direction: direction
+                      }); 
+                    }
                   }else if(visitor){
-                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                      foot: "left",
-                      mainAnimate: true,
-                      });
+                    if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "left",
+                        mainAnimate: true,
+                        direction: direction
+                        });
+                    }
+                    
                   }
                   setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                          mainAnimate: false,
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        mainAnimate: false,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
+                      
                     }
                   }, 600);
                 }
@@ -727,27 +958,23 @@ const SquareVisit = ({router}) => {
               };
             }else{
               setDirection("downDirection");
-              if(owner){
-                await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-                  direction: "downDirection"
-                  });
-              }else if(visitor){
-                await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                  direction: "downDirection"
-                  });
-              }
             }
             break;
         case "ArrowLeft":
-          setMessage();
+          setMessage("");
           if(owner){
-            await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+            if(visitorListCollection.length > 0){
+              await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
               message: ""
-              });
+              });          
+            }
           }else if(visitor){
-            await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-              message: ""
-              });
+            if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+              await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                message: ""
+                });  
+            }
+            
           }
             if(direction === "leftDirection"){
               if(areaMapping.includes(initial - 1)){
@@ -762,35 +989,49 @@ const SquareVisit = ({router}) => {
                     setPositionLeft(moveLeft);
                     setMoveLeft(moveLeft - 100);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "right",
                         initial: initial - 1,
                         mainAnimate: true,
                         positionLeft: moveLeft,
                         positionTop: moveTop,
-                        moveLeft: moveLeft - 100
+                        moveLeft: moveLeft - 100,
+                        direction: direction
                         });
+                      }
+                      
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "right",
-                        initial: initial - 1,
-                        mainAnimate: true,
-                        positionLeft: moveLeft,
-                        positionTop: moveTop,
-                        moveLeft: moveLeft - 100
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "right",
+                          initial: initial - 1,
+                          mainAnimate: true,
+                          positionLeft: moveLeft,
+                          positionTop: moveTop,
+                          moveLeft: moveLeft - 100,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                            mainAnimate: false,
                           });
+                        }
+                        
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }else if(foot === "right"){
@@ -802,35 +1043,49 @@ const SquareVisit = ({router}) => {
                     setPositionLeft(moveLeft);
                     setMoveLeft(moveLeft - 100);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "left",
                         initial: initial - 1,
                         mainAnimate: true,
                         positionLeft: moveLeft,
                         positionTop: moveTop,
-                        moveLeft: moveLeft - 100
+                        moveLeft: moveLeft - 100,
+                        direction: direction
                         });
+                      }
+                      
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "left",
-                        initial: initial - 1,
-                        mainAnimate: true,
-                        positionLeft: moveLeft,
-                        positionTop: moveTop,
-                        moveLeft: moveLeft - 100
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "left",
+                          initial: initial - 1,
+                          mainAnimate: true,
+                          positionLeft: moveLeft,
+                          positionTop: moveTop,
+                          moveLeft: moveLeft - 100,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                            mainAnimate: false,
                           });
+                        }
+                        
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }
@@ -840,54 +1095,82 @@ const SquareVisit = ({router}) => {
                     setFoot("right");
                     setMainAnimate(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                          await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "right",
                         mainAnimate: true,
+                        direction: direction
                         });
+                      }
+                     
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "right",
-                        mainAnimate: true,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "right",
+                          mainAnimate: true,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                            mainAnimate: false,
                           });
+                        }
+                        
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }else if(foot === "right"){
                     setFoot("left");
                     setMainAnimate(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "left",
                         mainAnimate: true,
+                        direction: direction
                         });
+                      }
+                      
                     }else if(visitor){
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+              
+                      }
                       await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
                         foot: "left",
                         mainAnimate: true,
+                        direction: direction
                         });
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                            mainAnimate: false,
                           });
+                        }
+                        
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }
@@ -898,81 +1181,106 @@ const SquareVisit = ({router}) => {
                   setFoot("right");
                   setMainAnimate(true);
                   if(owner){
-                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                    if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                       foot: "right",
                       mainAnimate: true,
+                      direction: direction
                       });
+                    }
+                    
                   }else if(visitor){
-                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                      foot: "right",
-                      mainAnimate: true,
-                      });
+                    if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "right",
+                        mainAnimate: true,
+                        direction: direction
+                        });
+                    }
+                    
                   }
                   setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                          mainAnimate: false,
-                        });
+                        }); 
+                      }
+                      
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        mainAnimate: false,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          mainAnimate: false,
+                          });
+                      }
+                      
                     }
                   }, 600);
                 }else if(foot === "right"){
                   setFoot("left");
                   setMainAnimate(true);
                   if(owner){
-                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                    if(visitorListCollection.length > 0){
+                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                       foot: "left",
                       mainAnimate: true,
-                      });
+                      direction: direction
+                      });  
+                    }
+                    
                   }else if(visitor){
-                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                      foot: "left",
-                      mainAnimate: true,
-                      });
+                    if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                        foot: "left",
+                        mainAnimate: true,
+                        direction: direction
+                        });
+                    }
+                    
                   }
                   setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                          mainAnimate: false,
-                        });
+                        }); 
+                      }
+                      
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        mainAnimate: false,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                                  mainAnimate: false,
+                                  });
+                      }
+                      
                     }
                   }, 600);
                 }
               };
             }else{
               setDirection("leftDirection");
-              if(owner){
-                await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-                  direction: "leftDirection"
-                  });
-              }else if(visitor){
-                await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                  direction: "leftDirection"
-                  });
-              }
             }
             break;
         case "ArrowRight":
-          setMessage();
+          setMessage("");
           if(owner){
-            await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+            if(visitorListCollection.length > 0){
+              await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
               message: ""
-              });
+              });         
+            }
+            
           }else if(visitor){
-            await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-              message: ""
-              });
+            if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+              await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                message: ""
+                });
+            }
+            
           }
             if(direction === "rightDirection"){
               if(areaMapping.includes(initial + 1)){
@@ -987,35 +1295,49 @@ const SquareVisit = ({router}) => {
                     setPositionLeft(moveLeft);
                     setMoveLeft(moveLeft + 100);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "right",
                         initial: initial + 1,
                         mainAnimate: true,
                         positionLeft: moveLeft,
                         positionTop: moveTop,
-                        moveLeft: moveLeft + 100
+                        moveLeft: moveLeft + 100,
+                        direction: direction
                         });
+                      }
+                      
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "right",
-                        initial: initial + 1,
-                        mainAnimate: true,
-                        positionLeft: moveLeft,
-                        positionTop: moveTop,
-                        moveLeft: moveLeft + 100
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                          foot: "right",
+                          initial: initial + 1,
+                          mainAnimate: true,
+                          positionLeft: moveLeft,
+                          positionTop: moveTop,
+                          moveLeft: moveLeft + 100,
+                          direction: direction
+                          });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                            mainAnimate: false,
                           });
+                        }
+                        
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                            mainAnimate: false,
+                            });
+                        }
+                        
                       }
                     }, 600);
                   }else if(foot === "right"){
@@ -1027,35 +1349,49 @@ const SquareVisit = ({router}) => {
                     setPositionLeft(moveLeft);
                     setMoveLeft(moveLeft + 100);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "left",
                         initial: initial + 1,
                         mainAnimate: true,
                         positionLeft: moveLeft,
                         positionTop: moveTop,
-                        moveLeft: moveLeft + 100
-                        });
+                        moveLeft: moveLeft + 100,
+                        direction: direction
+                        }); 
+                      }
+                      
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "left",
-                        initial: initial + 1,
-                        mainAnimate: true,
-                        positionLeft: moveLeft,
-                        positionTop: moveTop,
-                        moveLeft: moveLeft + 100
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                                  foot: "left",
+                                  initial: initial + 1,
+                                  mainAnimate: true,
+                                  positionLeft: moveLeft,
+                                  positionTop: moveTop,
+                                  moveLeft: moveLeft + 100,
+                                  direction: direction
+                                  });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                            mainAnimate: false,
                           });
+                        }
+                        
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                                      mainAnimate: false,
+                                      });
+                        }
+                        
                       }
                     }, 600);
                   }
@@ -1065,54 +1401,80 @@ const SquareVisit = ({router}) => {
                     setFoot("right");
                     setMainAnimate(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "right",
                         mainAnimate: true,
+                        direction: direction
                         });
+                      }
+                      
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "right",
-                        mainAnimate: true,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                                  foot: "right",
+                                  mainAnimate: true,
+                                  direction: direction
+                                  });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                            mainAnimate: false,
                           });
+                        }
+                        
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                                      mainAnimate: false,
+                                      });
+                        }
+                        
                       }
                     }, 600);
                   }else if(foot === "right"){
                     setFoot("left");
                     setMainAnimate(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                         foot: "left",
                         mainAnimate: true,
+                        direction: direction
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        foot: "left",
-                        mainAnimate: true,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                                  foot: "left",
+                                  mainAnimate: true,
+                                  direction: direction
+                                  });
+                      }
+                      
                     }
                     setTimeout(async()=>{
                       setMainAnimate(false);
                       setAllowInput(true);
                       if(owner){
-                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                        if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                            mainAnimate: false,
                           });
+                        }
                       }else if(visitor){
-                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                          mainAnimate: false,
-                          });
+                        if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                          await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                                      mainAnimate: false,
+                                      });
+                        }
+                        
                       }
                     }, 600);
                   }
@@ -1123,69 +1485,84 @@ const SquareVisit = ({router}) => {
                   setFoot("right");
                   setMainAnimate(true);
                   if(owner){
-                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                    if(visitorListCollection.length > 0){
+                        await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                       foot: "right",
                       mainAnimate: true,
-                      });
+                      direction: direction
+                      }); 
+                    }
                   }else if(visitor){
-                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                      foot: "right",
-                      mainAnimate: true,
-                      });
+                    if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                              foot: "right",
+                              mainAnimate: true,
+                              direction: direction
+                              });
+                    }
+                    
                   }
                   setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                          mainAnimate: false,
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        mainAnimate: false,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                                  mainAnimate: false,
+                                  });
+                      }
+                      
                     }
                   }, 600);
                 }else if(foot === "right"){
                   setFoot("left");
                   setMainAnimate(true);
                   if(owner){
-                    await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                    if(visitorListCollection.length > 0){
+                       await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                       foot: "left",
                       mainAnimate: true,
-                      });
+                      direction: direction
+                      });  
+                    }
                   }else if(visitor){
-                    await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                      foot: "left",
-                      mainAnimate: true,
-                      });
+                    if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                              foot: "left",
+                              mainAnimate: true,
+                              direction: direction
+                              });
+                    }
+                    
                   }
                   setTimeout(async()=>{
                     setMainAnimate(false);
                     setAllowInput(true);
                     if(owner){
-                      await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
+                      if(visitorListCollection.length > 0){
+                         await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
                          mainAnimate: false,
                         });
+                      }
                     }else if(visitor){
-                      await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                        mainAnimate: false,
-                        });
+                      if(visitorListCollection.length > 1 || ownerListCollection.length > 0){
+                        await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
+                                  mainAnimate: false,
+                                  });
+                      }
+                      
                     }
                   }, 600);
                 }
               };
             }else{
               setDirection("rightDirection");
-              if(owner){
-                await firestore.collection('squares').doc(userStorage.uid).collection('square').doc(`${visitStorage.squareId}`).collection('owner').doc(owner).update({
-                  direction: "rightDirection"
-                  });
-              }else if(visitor){
-                await firestore.collection('squares').doc(visitStorage.owner).collection('square').doc(`${visitStorage.squareId}`).collection('visitor').doc(visitor).update({
-                  direction: "rightDirection"
-                  });
-              }
             }
             break;
         default:
@@ -1200,7 +1577,7 @@ const SquareVisit = ({router}) => {
       window.addEventListener('keydown', keyControl);
     return () => window.removeEventListener('keydown', keyControl);
     }
-}, [allowInput, keyControl]);
+  }, [allowInput, keyControl]);
   
 
   return (
@@ -1263,61 +1640,114 @@ const SquareVisit = ({router}) => {
                        }
                      </div>
                     ))}
-                    {tile === 46 && 
-                      (!visitor && 
-                        (
-                          visitorListCollection && (
-                            visitorListCollection.map((visitor, index)=>
-                              <MainStyle key={visitor.id} positionTop={visitor.positionTop} moveTop={visitor.moveTop} positionLeft={visitor.positionLeft} moveLeft={visitor.moveLeft} style={{zIndex: `${visitor.initial > 15 && visitor.initial < 21 && "16" || visitor.initial > 22 && visitor.initial < 28 && "26" || visitor.initial > 29 && visitor.initial < 35 && "36" || visitor.initial > 36 && visitor.initial < 42 && "46" || visitor.initial === 46 && "56"}`}}>
-                                {visitor.direction === "upDirection" && 
-                                  (
-                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
-                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
-                                        {visitor.character === "default" && (visitor.mainAnimate === true && (<MainCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<MainCharUp/>)) || visitor.character === "girlChar" && (visitor.mainAnimate === true && (<GirlCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<GirlCharUp/>))}
-                                      </div>
-                                    </div>
-                                  )
-                                  || visitor.direction === "downDirection" &&
-                                  (
-                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
-                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
-                                      {visitor.character === "default" && (visitor.mainAnimate === true && (<MainCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<MainChar/>)) || visitor.character === "girlChar" && (visitor.mainAnimate === true && (<GirlCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<GirlChar/>))}
-                                      </div>
-                                    </div>
-                                  )
-                                  || visitor.direction === "leftDirection" &&
-                                  (
-                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
-                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
-                                      {visitor.character === "default" && (visitor.mainAnimate === true && (<MainCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<MainCharLeft/>)) || visitor.character === "girlChar" && (visitor.mainAnimate === true && (<GirlCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<GirlCharLeft/>))}
-                                      </div>
-                                    </div>
-                                  )
-                                  || visitor.direction === "rightDirection" &&
-                                  (
-                                    <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
-                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
-                                      {visitor.character === "default" && (visitor.mainAnimate === true && (<MainCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<MainCharRight/>)) || visitor.character === "girlChar" && (visitor.mainAnimate === true && (<GirlCharAnimation foot={visitor.foot} direction={visitor.direction}/>) || (<GirlCharRight/>))}
-                                      </div>
-                                    </div>
-                                  )
-                                  }
-                                  {visitor.message && 
-                                      <div style={{position: "absolute", width: "100%", height: "100%", top: "-80%", left: "80%", margin: "auto", zIndex: "50"}}>
-                                          <div style={{position: "relative", width: "auto", maxWidth: "100%", height: "auto", backgroundColor: "white", border: "2px solid black", borderRadius: "5px", padding: "2% 5%"}}>
-                                            <p style={{wordWrap: "break-word", textTransform: "none"}}>{visitor.message}</p>
+                    {/*<MainStyle key={visitors.uid} positionTop={visitors.positionTop} moveTop={visitors.moveTop} positionLeft={visitors.positionLeft} moveLeft={visitors.moveLeft} style={{zIndex: `${visitors.initial > 15 && visitors.initial < 21 && "16" || visitors.initial > 22 && visitors.initial < 28 && "26" || visitors.initial > 29 && visitors.initial < 35 && "36" || visitors.initial > 36 && visitors.initial < 42 && "46" || visitors.initial === 46 && "56"}`}}>
+                                      {visitors.direction === "upDirection" && 
+                                        (
+                                          <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                              {visitors.character === "default" && (visitors.mainAnimate === true && (<MainCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<MainCharUp/>)) || visitors.character === "girlChar" && (visitors.mainAnimate === true && (<GirlCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<GirlCharUp/>))}
+                                            </div>
                                           </div>
-                                      </div>}
-                                  {visitor.username && 
-                                  <div style={{position: "absolute", width: "100%", margin: "auto", top: "-75%", zIndex: "50"}}>
-                                      <div style={{position: "relative", width: "100%", height: "auto", display: "flex", justifyContent: "center"}}>
-                                        <div style={{position: "absolute", width: "auto", margin: "auto", backgroundColor: "RGBA(29,30,31,0.49)", padding: "2% 5%"}}>
-                                          <p style={{wordWrap: "break-word", color: "RGBA(255,255,255,1)"}}>{visitor.username}</p>
-                                        </div>
-                                      </div>
-                                  </div>}
-                              </MainStyle>
-                              )
+                                        )
+                                        || visitors.direction === "downDirection" &&
+                                        (
+                                          <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                            {visitors.character === "default" && (visitors.mainAnimate === true && (<MainCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<MainChar/>)) || visitors.character === "girlChar" && (visitors.mainAnimate === true && (<GirlCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<GirlChar/>))}
+                                            </div>
+                                          </div>
+                                        )
+                                        || visitors.direction === "leftDirection" &&
+                                        (
+                                          <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                            {visitors.character === "default" && (visitors.mainAnimate === true && (<MainCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<MainCharLeft/>)) || visitors.character === "girlChar" && (visitors.mainAnimate === true && (<GirlCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<GirlCharLeft/>))}
+                                            </div>
+                                          </div>
+                                        )
+                                        || visitors.direction === "rightDirection" &&
+                                        (
+                                          <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                            {visitors.character === "default" && (visitors.mainAnimate === true && (<MainCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<MainCharRight/>)) || visitors.character === "girlChar" && (visitors.mainAnimate === true && (<GirlCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<GirlCharRight/>))}
+                                            </div>
+                                          </div>
+                                        )
+                                        }
+                                        {visitors.message && 
+                                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-80%", left: "80%", margin: "auto", zIndex: "50"}}>
+                                                <div style={{position: "relative", width: "auto", maxWidth: "100%", height: "auto", backgroundColor: "white", border: "2px solid black", borderRadius: "5px", padding: "2% 5%"}}>
+                                                  <p style={{wordWrap: "break-word", textTransform: "none"}}>{visitors.message}</p>
+                                                </div>
+                                            </div>}
+                                        {visitors.username && 
+                                        <div style={{position: "absolute", width: "100%", margin: "auto", top: "-75%", zIndex: "50"}}>
+                                            <div style={{position: "relative", width: "100%", height: "auto", display: "flex", justifyContent: "center"}}>
+                                              <div style={{position: "absolute", width: "auto", margin: "auto", backgroundColor: "RGBA(29,30,31,0.49)", padding: "2% 5%"}}>
+                                                <p style={{wordWrap: "break-word", color: "RGBA(255,255,255,1)"}}>{visitors.username}</p>
+                                              </div>
+                                            </div>
+                                        </div>}
+                                    </MainStyle>*/}
+                    {tile === 46 && 
+                      (
+                        visitorListCollection &&
+                        (
+                          visitorListCollection.length > 0 && 
+                          (
+                            visitorListCollection.map((visitors, index)=>
+                              visitors.uid !== visitor && (
+                                <MainStyle key={visitors.uid} positionTop={visitors.positionTop} moveTop={visitors.moveTop} positionLeft={visitors.positionLeft} moveLeft={visitors.moveLeft} style={{zIndex: `${visitors.initial > 15 && visitors.initial < 21 && "16" || visitors.initial > 22 && visitors.initial < 28 && "26" || visitors.initial > 29 && visitors.initial < 35 && "36" || visitors.initial > 36 && visitors.initial < 42 && "46" || visitors.initial === 46 && "56"}`}}>
+                                      {visitors.direction === "upDirection" && 
+                                        (
+                                          <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                              {visitors.character === "default" && (visitors.mainAnimate === true && (<MainCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<MainCharUp/>)) || visitors.character === "girlChar" && (visitors.mainAnimate === true && (<GirlCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<GirlCharUp/>))}
+                                            </div>
+                                          </div>
+                                        )
+                                        || visitors.direction === "downDirection" &&
+                                        (
+                                          <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                            {visitors.character === "default" && (visitors.mainAnimate === true && (<MainCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<MainChar/>)) || visitors.character === "girlChar" && (visitors.mainAnimate === true && (<GirlCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<GirlChar/>))}
+                                            </div>
+                                          </div>
+                                        )
+                                        || visitors.direction === "leftDirection" &&
+                                        (
+                                          <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                            {visitors.character === "default" && (visitors.mainAnimate === true && (<MainCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<MainCharLeft/>)) || visitors.character === "girlChar" && (visitors.mainAnimate === true && (<GirlCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<GirlCharLeft/>))}
+                                            </div>
+                                          </div>
+                                        )
+                                        || visitors.direction === "rightDirection" &&
+                                        (
+                                          <div style={{position: "relative", width: "100%", height: "100%",display: "flex", justifyContent: "center"}}>
+                                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-75%", margin: "auto"}}>
+                                            {visitors.character === "default" && (visitors.mainAnimate === true && (<MainCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<MainCharRight/>)) || visitors.character === "girlChar" && (visitors.mainAnimate === true && (<GirlCharAnimation foot={visitors.foot} direction={visitors.direction}/>) || (<GirlCharRight/>))}
+                                            </div>
+                                          </div>
+                                        )
+                                        }
+                                        {visitors.message && 
+                                            <div style={{position: "absolute", width: "100%", height: "100%", top: "-80%", left: "80%", margin: "auto", zIndex: "50"}}>
+                                                <div style={{position: "relative", width: "auto", maxWidth: "100%", height: "auto", backgroundColor: "white", border: "2px solid black", borderRadius: "5px", padding: "2% 5%"}}>
+                                                  <p style={{wordWrap: "break-word", textTransform: "none"}}>{visitors.message}</p>
+                                                </div>
+                                            </div>}
+                                        {visitors.username && 
+                                        <div style={{position: "absolute", width: "100%", margin: "auto", top: "-75%", zIndex: "50"}}>
+                                            <div style={{position: "relative", width: "100%", height: "auto", display: "flex", justifyContent: "center"}}>
+                                              <div style={{position: "absolute", width: "auto", margin: "auto", backgroundColor: "RGBA(29,30,31,0.49)", padding: "2% 5%"}}>
+                                                <p style={{wordWrap: "break-word", color: "RGBA(255,255,255,1)"}}>{visitors.username}</p>
+                                              </div>
+                                            </div>
+                                        </div>}
+                                    </MainStyle>
+                              ) 
+                            )
                           )
                         )
                       )
