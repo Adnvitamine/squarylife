@@ -1981,7 +1981,7 @@ const SquareVisit = ({router}) => {
           rel="noopener noreferrer"
         >
           Powered by{' '}
-          Doan Nguyen
+          Doan Nguyen - 2021
         </a>
       </footer>
   </div>
