@@ -1,0 +1,1 @@
+_N_E=(window.webpackJsonp_N_E=window.webpackJsonp_N_E||[]).push([[35],{"/cae":function(n,e,t){(window.__NEXT_P=window.__NEXT_P||[]).push(["/sprites/characters/mainChar/animation/moveUp",function(){return t("Gwfr")}])},Qetd:function(n,e,t){"use strict";var i=Object.assign.bind(Object);n.exports=i,n.exports.default=n.exports}},[["/cae",0,1,16]]]);

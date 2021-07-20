@@ -1,0 +1,1 @@
+_N_E=(window.webpackJsonp_N_E=window.webpackJsonp_N_E||[]).push([[43],{"1sW/":function(_,n,s){(window.__NEXT_P=window.__NEXT_P||[]).push(["/squares/squareList",function(){return s("MIug")}])}},[["1sW/",0,1,4,6,2,3,5,12]]]);

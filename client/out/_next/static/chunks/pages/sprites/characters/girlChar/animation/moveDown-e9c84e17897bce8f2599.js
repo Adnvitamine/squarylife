@@ -1,0 +1,1 @@
+_N_E=(window.webpackJsonp_N_E=window.webpackJsonp_N_E||[]).push([[26],{Qetd:function(n,o,i){"use strict";var t=Object.assign.bind(Object);n.exports=t,n.exports.default=n.exports},oidc:function(n,o,i){(window.__NEXT_P=window.__NEXT_P||[]).push(["/sprites/characters/girlChar/animation/moveDown",function(){return i("xTFP")}])}},[["oidc",0,1,11]]]);

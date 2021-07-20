@@ -1,0 +1,1 @@
+_N_E=(window.webpackJsonp_N_E=window.webpackJsonp_N_E||[]).push([[33],{K0wP:function(n,t,e){(window.__NEXT_P=window.__NEXT_P||[]).push(["/sprites/characters/mainChar/animation/moveLeft",function(){return e("lUuQ")}])},Qetd:function(n,t,e){"use strict";var i=Object.assign.bind(Object);n.exports=i,n.exports.default=n.exports}},[["K0wP",0,1,15]]]);

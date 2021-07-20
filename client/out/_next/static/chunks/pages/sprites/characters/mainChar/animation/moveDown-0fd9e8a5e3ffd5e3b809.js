@@ -1,0 +1,1 @@
+_N_E=(window.webpackJsonp_N_E=window.webpackJsonp_N_E||[]).push([[32],{MGSg:function(n,t,o){(window.__NEXT_P=window.__NEXT_P||[]).push(["/sprites/characters/mainChar/animation/moveDown",function(){return o("ktGF")}])},Qetd:function(n,t,o){"use strict";var e=Object.assign.bind(Object);n.exports=e,n.exports.default=n.exports}},[["MGSg",0,1,13]]]);

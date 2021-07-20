@@ -1,0 +1,1 @@
+_N_E=(window.webpackJsonp_N_E=window.webpackJsonp_N_E||[]).push([[40],{OzMm:function(n,t,s){(window.__NEXT_P=window.__NEXT_P||[]).push(["/sprites/furnitures/window",function(){return s("V7PT")}])},Qetd:function(n,t,s){"use strict";var e=Object.assign.bind(Object);n.exports=e,n.exports.default=n.exports}},[["OzMm",0,1,17]]]);

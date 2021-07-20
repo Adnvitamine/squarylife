@@ -1,0 +1,1 @@
+_N_E=(window.webpackJsonp_N_E=window.webpackJsonp_N_E||[]).push([[28],{"N/ek":function(n,t,e){(window.__NEXT_P=window.__NEXT_P||[]).push(["/sprites/characters/girlChar/animation/moveRight",function(){return e("ixOX")}])},Qetd:function(n,t,e){"use strict";var i=Object.assign.bind(Object);n.exports=i,n.exports.default=n.exports}},[["N/ek",0,1,19]]]);

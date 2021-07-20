@@ -1,0 +1,1 @@
+_N_E=(window.webpackJsonp_N_E=window.webpackJsonp_N_E||[]).push([[39],{Qetd:function(t,n,s){"use strict";var e=Object.assign.bind(Object);t.exports=e,t.exports.default=t.exports},dt7g:function(t,n,s){(window.__NEXT_P=window.__NEXT_P||[]).push(["/sprites/furnitures/storage",function(){return s("SsNt")}])}},[["dt7g",0,1,10]]]);
